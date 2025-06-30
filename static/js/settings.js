@@ -24,15 +24,9 @@ function updateSettings(data) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Load current app name on page load
+    // Handle application name update
     const nameInput = document.getElementById('app_name');
     const updateNameBtn = document.getElementById('update_name');
-    
-    // Set current app name value if available
-    if (nameInput && window.appName) {
-        nameInput.value = window.appName;
-    }
-    
     if (nameInput && updateNameBtn) {
         updateNameBtn.addEventListener('click', function() {
             const name = nameInput.value.trim();
@@ -61,33 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle color wheel change
-    const colorWheel = document.getElementById('color_wheel');
-    const colorPreview = document.getElementById('color_preview');
-    const colorValue = document.getElementById('color_value');
-    
-    if (colorWheel) {
-        colorWheel.addEventListener('input', function() {
-            const selectedColor = this.value;
-            updateColorPreview(selectedColor);
-        });
-        
-        colorWheel.addEventListener('change', async function() {
-            const selectedColor = this.value;
-            await updateThemeColor(selectedColor);
-        });
-    }
-
-    // Handle preset color buttons
-    const presetColors = document.querySelectorAll('.preset-color');
-    presetColors.forEach(button => {
-        button.addEventListener('click', async function() {
-            const selectedColor = this.getAttribute('data-color');
-            colorWheel.value = selectedColor;
-            updateColorPreview(selectedColor);
-            await updateThemeColor(selectedColor);
-        });
-    });
+    // Theme is now fixed to light mode only
 
     // Handle logo upload
     const logoInput = document.getElementById('app_logo');
@@ -95,53 +63,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoInput && uploadLogoBtn) {
         uploadLogoBtn.addEventListener('click', function() {
             const file = logoInput.files[0];
-            if (!file) {
-                showAlert('Please select a file first', 'warning');
-                return;
-            }
-            
-            // Validate file type
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
-            if (!allowedTypes.includes(file.type)) {
-                showAlert('Please select a valid image file (PNG, JPG, JPEG, SVG)', 'danger');
-                return;
-            }
-            
-            // Validate file size (2MB limit)
-            if (file.size > 2 * 1024 * 1024) {
-                showAlert('File size must be less than 2MB', 'danger');
-                return;
-            }
+            if (file) {
+                const formData = new FormData();
+                formData.append('logo', file);
 
-            const formData = new FormData();
-            formData.append('logo', file);
-
-            // Show loading state
-            uploadLogoBtn.disabled = true;
-            uploadLogoBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-
-            fetch('/api/settings/logo', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('Logo updated successfully', 'success');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showAlert(data.error || 'Error updating logo', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('Error updating logo', 'danger');
-            })
-            .finally(() => {
-                // Reset button state
-                uploadLogoBtn.disabled = false;
-                uploadLogoBtn.innerHTML = 'Upload Logo';
-            });
+                fetch('/api/settings/logo', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Logo updated successfully', 'success');
+                    } else {
+                        showAlert('Error updating logo', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error updating logo', 'danger');
+                });
+            }
         });
     }
 
@@ -477,58 +419,6 @@ function showAlert(message, type) {
     setTimeout(() => {
         alertDiv.remove();
     }, 3000);
-}
-
-// Update color preview elements
-function updateColorPreview(color) {
-    const colorPreview = document.getElementById('color_preview');
-    const colorValue = document.getElementById('color_value');
-    
-    if (colorPreview) {
-        colorPreview.style.backgroundColor = color;
-    }
-    
-    if (colorValue) {
-        colorValue.textContent = color.toUpperCase();
-    }
-    
-    // Apply immediately to document
-    document.documentElement.style.setProperty('--primary', color);
-}
-
-// Update theme color via API
-async function updateThemeColor(color) {
-    try {
-        const response = await fetch('/api/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ theme_color: color })
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                showAlert('Theme color updated successfully', 'success');
-                // Reload page to apply theme fully after a short delay
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                showAlert('Failed to update theme color', 'danger');
-            }
-        } else {
-            const errorData = await response.json();
-            showAlert(`Failed to update theme color: ${errorData.error || 'Unknown error'}`, 'danger');
-        }
-    } catch (error) {
-        console.error('Error updating theme color:', error);
-        showAlert('Error updating theme color', 'danger');
-    }
-}
-
-// Apply theme color to document (legacy function for compatibility)
-function applyThemeColor(color) {
-    document.documentElement.style.setProperty('--primary', color);
 }
 
 // Confirm action before delete

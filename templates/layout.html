@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="{{ theme if theme else 'light' }}" data-theme-color="{{ theme_color if theme_color else 'blue' }}">
+<html lang="en" data-bs-theme="{{ theme if theme else 'light' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -53,119 +53,22 @@
     }
     </style>
 
-    <!-- Add dynamic theme color application -->
-    <style>
-        :root {
-            --primary: {{ theme_color if theme_color else '#0f6e84' }};
-            --primary-dark: {% if theme_color %}{{ theme_color }}cc{% else %}#0a5a6d{% endif %};
-        }
-
-        /* Apply theme color immediately */
-        .btn-primary {
-            background-color: var(--primary) !important;
-            border-color: var(--primary) !important;
-        }
-
-        .btn-primary:hover,
-        .btn-primary:focus,
-        .btn-primary:active {
-            background-color: var(--primary-dark) !important;
-            border-color: var(--primary-dark) !important;
-        }
-
-        .bg-primary {
-            background-color: var(--primary) !important;
-        }
-
-        .text-primary {
-            color: var(--primary) !important;
-        }
-
-        .navbar-brand {
-            color: var(--primary) !important;
-        }
-
-        .settings-header .icon {
-            color: var(--primary) !important;
-        }
-    </style>
-
     <!-- Page-specific CSS -->
     {% block styles %}{% endblock %}
 </head>
 <body>
-    {% if current_user.is_authenticated %}
-        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-            <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}">
-                    {% set logo_setting = [] %}
-                    {% for setting in [] %}
-                        {% if setting.key == 'app_logo' %}
-                            {% set _ = logo_setting.append(setting) %}
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if logo_setting and logo_setting[0].value %}
-                        <img src="{{ url_for('uploaded_file', filename=logo_setting[0].value) }}" alt="Logo" style="height: 40px; margin-right: 10px;">
-                    {% else %}
-                        <i class="fas fa-calendar-alt me-2" style="color: var(--primary, #0f6e84);"></i>
-                    {% endif %}
-                    <span class="fw-bold" style="color: var(--primary, #0f6e84);">{{ app_name if app_name else 'PharmaEvents' }}</span>
-                </a>
-
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('events') }}">
-                                <i class="fas fa-calendar-check me-2"></i>Events
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('create_event') }}">
-                                <i class="fas fa-plus-circle me-2"></i>Create Event
-                            </a>
-                        </li>
-                        {% if current_user.is_admin() %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('settings') }}">
-                                <i class="fas fa-cogs me-2"></i>Settings
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-
-                    <ul class="navbar-nav">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user-circle me-2"></i>
-                                <span>{{ current_user.email }}</span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <span class="dropdown-item-text">
-                                        <small class="text-muted">Role:</small><br>
-                                        <span class="badge bg-{% if current_user.role == 'admin' %}primary{% elif current_user.role == 'medical_rep' %}info{% else %}secondary{% endif %}">
-                                            {% if current_user.role == 'medical_rep' %}Medical Rep{% else %}{{ current_user.role|title }}{% endif %}
-                                        </span>
-                                    </span>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
+    <!-- Loading Overlay -->
+    <div id="loading_overlay" class="loading-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
-        </nav>
+            <div class="loading-message">Please wait while we process your request...</div>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+        {% include 'components/nav.html' %}
     {% endif %}
 
     <div class="container-fluid py-4">
