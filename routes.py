@@ -578,15 +578,21 @@ def update_settings():
     if 'theme_color' in data and data['theme_color']:
         # Validate hex color format
         theme_color = data['theme_color']
-        if isinstance(theme_color, str) and (theme_color.startswith('#') and len(theme_color) == 7):
-            theme_color_setting = AppSetting.query.filter_by(key='theme_color').first()
-            if not theme_color_setting:
-                theme_color_setting = AppSetting()
-                theme_color_setting.key = 'theme_color'
-                theme_color_setting.value = '#0f6e84'
-                db.session.add(theme_color_setting)
-            theme_color_setting.value = theme_color
-            db.session.commit()
+        if isinstance(theme_color, str) and theme_color.startswith('#') and len(theme_color) == 7:
+            # Additional validation for valid hex characters
+            try:
+                int(theme_color[1:], 16)  # Validate hex format
+                theme_color_setting = AppSetting.query.filter_by(key='theme_color').first()
+                if not theme_color_setting:
+                    theme_color_setting = AppSetting()
+                    theme_color_setting.key = 'theme_color'
+                    db.session.add(theme_color_setting)
+                theme_color_setting.value = theme_color
+                db.session.commit()
+            except ValueError:
+                return jsonify({'success': False, 'error': 'Invalid color format'}), 400
+        else:
+            return jsonify({'success': False, 'error': 'Invalid color format'}), 400
 
     # Handle app name change
     if 'name' in data and data['name'] and data['name'].strip():

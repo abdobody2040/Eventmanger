@@ -476,11 +476,17 @@ async function updateThemeColor(color) {
         });
         
         if (response.ok) {
-            showAlert('Theme color updated successfully', 'success');
-            // Reload page to apply theme fully after a short delay
-            setTimeout(() => window.location.reload(), 1000);
+            const result = await response.json();
+            if (result.success) {
+                showAlert('Theme color updated successfully', 'success');
+                // Reload page to apply theme fully after a short delay
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showAlert('Failed to update theme color', 'danger');
+            }
         } else {
-            showAlert('Failed to update theme color', 'danger');
+            const errorData = await response.json();
+            showAlert(`Failed to update theme color: ${errorData.error || 'Unknown error'}`, 'danger');
         }
     } catch (error) {
         console.error('Error updating theme color:', error);

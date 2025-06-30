@@ -14,6 +14,47 @@
   --info: #17a2b8;
 }
 
+/* Bootstrap override for primary color */
+.btn-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--primary-dark) !important;
+  border-color: var(--primary-dark) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.border-primary {
+  border-color: var(--primary) !important;
+}
+
+/* Navbar and navigation */
+.navbar-brand,
+.nav-link.active {
+  color: var(--primary) !important;
+}
+
+/* Cards and components */
+.card-header.bg-light {
+  border-bottom: 2px solid var(--primary);
+}
+
+/* Icons and accents */
+.settings-header .icon {
+  color: var(--primary) !important;
+}
+
 /* Color Wheel Styles */
 .color-wheel-container {
     display: flex;

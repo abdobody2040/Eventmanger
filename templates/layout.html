@@ -53,6 +53,43 @@
     }
     </style>
 
+    <!-- Add dynamic theme color application -->
+    <style>
+        :root {
+            --primary: {{ theme_color if theme_color else '#0f6e84' }};
+            --primary-dark: {% if theme_color %}{{ theme_color }}cc{% else %}#0a5a6d{% endif %};
+        }
+
+        /* Apply theme color immediately */
+        .btn-primary {
+            background-color: var(--primary) !important;
+            border-color: var(--primary) !important;
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
+        }
+
+        .bg-primary {
+            background-color: var(--primary) !important;
+        }
+
+        .text-primary {
+            color: var(--primary) !important;
+        }
+
+        .navbar-brand {
+            color: var(--primary) !important;
+        }
+
+        .settings-header .icon {
+            color: var(--primary) !important;
+        }
+    </style>
+
     <!-- Page-specific CSS -->
     {% block styles %}{% endblock %}
 </head>
