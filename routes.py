@@ -555,12 +555,14 @@ def settings():
     
     # Get app settings
     app_name = AppSetting.query.filter_by(key='app_name').first()
+    theme_color = AppSetting.query.filter_by(key='theme_color').first()
     
     return render_template('settings.html',
                           categories=categories,
                           event_types=event_types,
                           users=users,
-                          app_name=app_name.value if app_name else 'PharmaEvents')
+                          app_name=app_name.value if app_name else 'PharmaEvents',
+                          theme_color=theme_color.value if theme_color else 'blue')
                           
 # API endpoints for settings
 @app.route('/api/settings', methods=['POST'])
@@ -572,7 +574,16 @@ def update_settings():
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
-    # Theme is now fixed to light mode only
+    # Handle theme color change
+    if 'theme_color' in data and data['theme_color'] in ['blue', 'green', 'purple', 'red', 'orange']:
+        theme_color_setting = AppSetting.query.filter_by(key='theme_color').first()
+        if not theme_color_setting:
+            theme_color_setting = AppSetting()
+            theme_color_setting.key = 'theme_color'
+            theme_color_setting.value = 'blue'
+            db.session.add(theme_color_setting)
+        theme_color_setting.value = data['theme_color']
+        db.session.commit()
     
     # Handle app name change
     if 'name' in data and data['name'] and data['name'].strip():
@@ -976,10 +987,12 @@ def migrate_db():
 @app.context_processor
 def inject_settings():
     app_name = AppSetting.query.filter_by(key='app_name').first()
+    theme_color = AppSetting.query.filter_by(key='theme_color').first()
     
     return {
         'app_name': app_name.value if app_name else 'PharmaEvents',
-        'theme': 'light'
+        'theme': 'light',
+        'theme_color': theme_color.value if theme_color else 'blue'
     }
 
 # Initialize database with seed data    

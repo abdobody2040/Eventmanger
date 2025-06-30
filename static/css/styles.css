@@ -14,6 +14,32 @@
   --info: #17a2b8;
 }
 
+/* Theme Color Classes */
+[data-theme-color="blue"] {
+    --primary: #0f6e84;
+    --primary-dark: #0a5a6e;
+}
+
+[data-theme-color="green"] {
+    --primary: #198754;
+    --primary-dark: #146c43;
+}
+
+[data-theme-color="purple"] {
+    --primary: #6f42c1;
+    --primary-dark: #59359a;
+}
+
+[data-theme-color="red"] {
+    --primary: #dc3545;
+    --primary-dark: #b02a37;
+}
+
+[data-theme-color="orange"] {
+    --primary: #fd7e14;
+    --primary-dark: #e8690b;
+}
+
 body {
   font-family: 'Roboto', sans-serif;
   background-color: #f5f7f9;
@@ -268,11 +294,11 @@ body {
   .login-left {
     display: none;
   }
-  
+
   .stat-card .stat-value {
     font-size: 2rem;
   }
-  
+
   .chart-container {
     height: 300px;
   }
