@@ -557,14 +557,12 @@ def settings():
     
     # Get app settings
     app_name = AppSetting.query.filter_by(key='app_name').first()
-    theme = AppSetting.query.filter_by(key='theme').first()
     
     return render_template('settings.html',
                           categories=categories,
                           event_types=event_types,
                           users=users,
-                          app_name=app_name.value if app_name else 'PharmaEvents',
-                          theme=theme.value if theme else 'light')
+                          app_name=app_name.value if app_name else 'PharmaEvents')
                           
 # API endpoints for settings
 @app.route('/api/settings', methods=['POST'])
@@ -576,16 +574,7 @@ def update_settings():
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
-    # Handle theme toggle
-    if 'theme' in data and data['theme'] in ['light', 'dark']:
-        theme_setting = AppSetting.query.filter_by(key='theme').first()
-        if not theme_setting:
-            theme_setting = AppSetting()
-            theme_setting.key = 'theme'
-            theme_setting.value = 'light'
-            db.session.add(theme_setting)
-        theme_setting.value = data['theme']
-        db.session.commit()  # Commit the change immediately
+    # Theme is now fixed to light mode only
     
     # Handle app name change
     if 'name' in data and data['name'] and data['name'].strip():
@@ -989,11 +978,10 @@ def migrate_db():
 @app.context_processor
 def inject_settings():
     app_name = AppSetting.query.filter_by(key='app_name').first()
-    theme = AppSetting.query.filter_by(key='theme').first()
     
     return {
         'app_name': app_name.value if app_name else 'PharmaEvents',
-        'theme': theme.value if theme else 'light'
+        'theme': 'light'
     }
 
 # Initialize database with seed data    

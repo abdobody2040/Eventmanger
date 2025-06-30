@@ -55,36 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle theme toggle
-    const themeToggles = document.querySelectorAll('input[name="theme"]');
-    themeToggles.forEach(toggle => {
-        toggle.addEventListener('change', async function() {
-            const theme = this.value;
-            try {
-                const response = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ theme: theme })
-                });
-                
-                if (response.ok) {
-                    // Update UI theme
-                    document.documentElement.setAttribute('data-bs-theme', theme);
-                    // Show success message
-                    showAlert('Theme updated successfully', 'success');
-                    // Reload page to apply theme fully
-                    setTimeout(() => window.location.reload(), 500);
-                } else {
-                    showAlert('Failed to update theme', 'danger');
-                }
-            } catch (error) {
-                console.error('Error updating theme:', error);
-                showAlert('Error updating theme', 'danger');
-            }
-        });
-    });
+    // Theme is now fixed to light mode only
 
     // Handle logo upload
     const logoInput = document.getElementById('app_logo');
