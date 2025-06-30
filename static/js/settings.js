@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const colorPicker = document.getElementById('color_picker');
     const colorPreview = document.getElementById('color_preview');
     const applyColorBtn = document.getElementById('apply_custom_color');
-
+    
     if (colorPicker && colorPreview) {
         // Update preview when color changes
         colorPicker.addEventListener('input', function() {
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Apply color immediately to root for live preview
             document.documentElement.style.setProperty('--primary', selectedColor);
         });
-
+        
         // Apply color when button is clicked
         if (applyColorBtn) {
             applyColorBtn.addEventListener('click', function() {
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
-
+    
     // Handle preset color buttons
     const presetButtons = document.querySelectorAll('.preset-color');
     presetButtons.forEach(button => {
@@ -133,20 +133,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 showAlert('Please select a file first', 'warning');
                 return;
             }
-
+            
             // Validate file type
             const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
             if (!allowedTypes.includes(file.type)) {
                 showAlert('Please select a PNG, JPG, or SVG file', 'danger');
                 return;
             }
-
+            
             // Validate file size (2MB max)
             if (file.size > 2 * 1024 * 1024) {
                 showAlert('File size must be less than 2MB', 'danger');
                 return;
             }
-
+            
             const formData = new FormData();
             formData.append('logo', file);
 
@@ -272,35 +272,35 @@ function addUser() {
     const emailInput = document.getElementById('user_email');
     const passwordInput = document.getElementById('user_password');
     const roleSelect = document.getElementById('user_role');
-
+    
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     const role = roleSelect.value;
-
+    
     if (!email || !password || !role) {
         showAlert('Please fill all fields', 'danger');
         return;
     }
-
+    
     // Validate email format
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailPattern.test(email)) {
         showAlert('Please enter a valid email address', 'danger');
         return;
     }
-
+    
     // Validate password length
     if (password.length < 6) {
         showAlert('Password must be at least 6 characters long', 'danger');
         return;
     }
-
+    
     // Create form data
     const formData = new FormData();
     formData.append('email', email);
     formData.append('password', password);
     formData.append('role', role);
-
+    
     // Send request
     fetch('/api/users', {
         method: 'POST',
@@ -317,18 +317,18 @@ function addUser() {
         const userList = document.getElementById('user_list');
         const row = document.createElement('tr');
         row.setAttribute('data-id', data.id);
-
+        
         // Determine badge color based on role
         let badgeClass = 'bg-secondary';
         let roleDisplay = data.role.toUpperCase();
-
+        
         if (data.role === 'admin') {
             badgeClass = 'bg-primary';
         } else if (data.role === 'medical_rep') {
             badgeClass = 'bg-info';
             roleDisplay = 'MEDICAL REP';
         }
-
+        
         row.innerHTML = `
             <td>${data.email}</td>
             <td><span class="badge ${badgeClass}">${roleDisplay}</span></td>
@@ -338,16 +338,16 @@ function addUser() {
                 </button>
             </td>
         `;
-
+        
         userList.appendChild(row);
-
+        
         // Clear inputs
         emailInput.value = '';
         passwordInput.value = '';
         roleSelect.value = 'event_manager';
-
+        
         showAlert('User added successfully', 'success');
-
+        
         // Reinitialize delete buttons
         initializeDeleteButtons();
     })
@@ -376,12 +376,12 @@ function initializeDeleteButtons() {
                             'Content-Type': 'application/json'
                         }
                     });
-
+                    
                     if (!response.ok) {
                         const data = await response.json();
                         throw new Error(data.error || 'Failed to delete category');
                     }
-
+                    
                     const row = button.closest('tr');
                     if (row) {
                         row.remove();
@@ -408,12 +408,12 @@ function initializeDeleteButtons() {
                             'Content-Type': 'application/json'
                         }
                     });
-
+                    
                     if (!response.ok) {
                         const data = await response.json();
                         throw new Error(data.error || 'Failed to delete event type');
                     }
-
+                    
                     const row = button.closest('tr');
                     if (row) {
                         row.remove();
@@ -440,12 +440,12 @@ function initializeDeleteButtons() {
                             'Content-Type': 'application/json'
                         }
                     });
-
+                    
                     if (!response.ok) {
                         const data = await response.json();
                         throw new Error(data.error || 'Failed to delete user');
                     }
-
+                    
                     const row = button.closest('tr');
                     if (row) {
                         row.remove();
@@ -468,11 +468,11 @@ async function deleteUser(id) {
                 method: 'DELETE'
             });
             const data = await response.json();
-
+            
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to delete user');
             }
-
+            
             const row = document.querySelector(`tr[data-id="${id}"]`);
             if (row) {
                 row.remove();
@@ -513,7 +513,7 @@ function applyThemeColor(color) {
         'red': '#dc3545',
         'orange': '#fd7e14'
     };
-
+    
     const primaryColor = colorMap[color] || colorMap['blue'];
     document.documentElement.style.setProperty('--primary', primaryColor);
 }
@@ -524,40 +524,3 @@ function confirmAction(message, callback) {
         callback();
     }
 }
-
-function getColorName(hex) {
-        const colorMap = {
-            '#0f6e84': 'blue',
-            '#198754': 'green', 
-            '#6f42c1': 'purple',
-            '#dc3545': 'red',
-            '#fd7e14': 'orange'
-        };
-        return colorMap[hex.toLowerCase()] || 'custom';
-    }
-
-    // Utility function to show alerts
-    function showAlert(message, type) {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.alert-dynamic');
-        existingAlerts.forEach(alert => alert.remove());
-
-        // Create new alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-dynamic`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-
-        // Add alert to page
-        const container = document.querySelector('.container-fluid') || document.body;
-        container.insertBefore(alertDiv, container.firstChild);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (alertDiv && alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
-    }
