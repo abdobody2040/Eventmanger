@@ -453,10 +453,30 @@ function showAlert(message, type) {
 function applyThemeColor(color) {
     const colorMap = {
         'blue': '#0f6e84',
+        'navy': '#1e3a8a',
+        'sky': '#0ea5e9',
+        'cyan': '#06b6d4',
+        'teal': '#0d9488',
         'green': '#198754',
+        'emerald': '#10b981',
+        'lime': '#65a30d',
+        'mint': '#059669',
         'purple': '#6f42c1',
+        'violet': '#8b5cf6',
+        'indigo': '#6366f1',
+        'lavender': '#a855f7',
         'red': '#dc3545',
-        'orange': '#fd7e14'
+        'rose': '#f43f5e',
+        'pink': '#ec4899',
+        'ruby': '#be123c',
+        'orange': '#fd7e14',
+        'amber': '#f59e0b',
+        'yellow': '#eab308',
+        'coral': '#ff6b6b',
+        'slate': '#475569',
+        'brown': '#92400e',
+        'bronze': '#cd7f32',
+        'charcoal': '#374151'
     };
     
     const primaryColor = colorMap[color] || colorMap['blue'];
