@@ -353,3 +353,43 @@ body {
   color: var(--primary);
   font-weight: 500;
 }
+
+/* Color Picker Styles */
+.form-control-color {
+    width: 80px;
+    height: 50px;
+    border-radius: 8px;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.form-control-color:hover {
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.color-preview {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preset-color {
+    min-width: 80px;
+    margin-bottom: 0.5rem;
+    border: 2px solid transparent !important;
+    transition: all 0.3s ease;
+}
+
+.preset-color:hover {
+    border-color: #fff !important;
+    box-shadow: 0 0 0 2px var(--primary);
+    transform: translateY(-2px);
+}
+
+.current-theme-display {
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+}
+
+/* Color Wheel Styles */

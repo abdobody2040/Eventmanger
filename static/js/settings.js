@@ -55,35 +55,73 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle theme color change
-    const themeColorToggles = document.querySelectorAll('input[name="theme_color"]');
-    themeColorToggles.forEach(toggle => {
-        toggle.addEventListener('change', async function() {
-            const themeColor = this.value;
-            try {
-                const response = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ theme_color: themeColor })
-                });
-                
-                if (response.ok) {
-                    // Apply theme color immediately
-                    applyThemeColor(themeColor);
-                    showAlert('Theme color updated successfully', 'success');
-                    // Reload page to apply theme fully
-                    setTimeout(() => window.location.reload(), 500);
-                } else {
-                    showAlert('Failed to update theme color', 'danger');
-                }
-            } catch (error) {
-                console.error('Error updating theme color:', error);
-                showAlert('Error updating theme color', 'danger');
+    // Handle color picker change
+    const colorPicker = document.getElementById('color_picker');
+    const colorPreview = document.getElementById('color_preview');
+    const applyColorBtn = document.getElementById('apply_custom_color');
+    
+    if (colorPicker && colorPreview) {
+        // Update preview when color changes
+        colorPicker.addEventListener('input', function() {
+            const selectedColor = this.value;
+            colorPreview.style.backgroundColor = selectedColor;
+            // Apply color immediately to root for live preview
+            document.documentElement.style.setProperty('--primary', selectedColor);
+        });
+        
+        // Apply color when button is clicked
+        if (applyColorBtn) {
+            applyColorBtn.addEventListener('click', function() {
+                const selectedColor = colorPicker.value;
+                updateThemeColor(selectedColor);
+            });
+        }
+    }
+    
+    // Handle preset color buttons
+    const presetButtons = document.querySelectorAll('.preset-color');
+    presetButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const presetColor = this.getAttribute('data-color');
+            if (colorPicker && colorPreview) {
+                colorPicker.value = presetColor;
+                colorPreview.style.backgroundColor = presetColor;
+                document.documentElement.style.setProperty('--primary', presetColor);
             }
+            updateThemeColor(presetColor);
         });
     });
+
+    // Function to update theme color
+    function updateThemeColor(color) {
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ theme_color: color })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Theme color updated successfully!', 'success');
+                // Update current theme display
+                const currentDisplay = document.querySelector('.current-theme-display');
+                if (currentDisplay) {
+                    currentDisplay.style.backgroundColor = color;
+                    currentDisplay.innerHTML = `<strong>Current Theme Color: ${color}</strong>`;
+                }
+                // Reload page to apply theme fully
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showAlert('Failed to update theme color', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating theme color:', error);
+            showAlert('Error updating theme color', 'danger');
+        });
+    }
 
     // Handle logo upload
     const logoInput = document.getElementById('app_logo');

@@ -53,6 +53,31 @@
     }
     </style>
 
+    <!-- Add dynamic theme color application -->
+    <style>
+        :root {
+            {% if theme_color and theme_color.startswith('#') %}
+                --primary: {{ theme_color }};
+                --primary-dark: {{ theme_color }}cc;
+            {% elif theme_color == 'green' %}
+                --primary: #198754;
+                --primary-dark: #146c43;
+            {% elif theme_color == 'purple' %}
+                --primary: #6f42c1;
+                --primary-dark: #59359a;
+            {% elif theme_color == 'red' %}
+                --primary: #dc3545;
+                --primary-dark: #b02a37;
+            {% elif theme_color == 'orange' %}
+                --primary: #fd7e14;
+                --primary-dark: #e8690b;
+            {% else %}
+                --primary: #0f6e84;
+                --primary-dark: #0a5a6d;
+            {% endif %}
+        }
+    </style>
+
     <!-- Page-specific CSS -->
     {% block styles %}{% endblock %}
 </head>

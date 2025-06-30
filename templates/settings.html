@@ -50,41 +50,72 @@
     <div class="card">
         <div class="card-body">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <label class="form-label">Primary Theme Color</label>
-                    <div class="row g-2">
-                        <div class="col-auto">
-                            <input type="radio" class="btn-check" name="theme_color" id="theme_blue" value="blue" {% if not theme_color or theme_color == 'blue' %}checked{% endif %}>
-                            <label class="btn btn-outline-primary" for="theme_blue">
-                                <i class="fas fa-circle" style="color: #0f6e84;"></i> Blue
-                            </label>
+                    
+                    <!-- Color Wheel Picker -->
+                    <div class="mb-3">
+                        <label for="color_picker" class="form-label">Custom Color Picker</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="color" class="form-control form-control-color" id="color_picker" value="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}" title="Choose your color">
+                            <div class="color-preview" id="color_preview" style="width: 50px; height: 50px; border: 2px solid #ddd; border-radius: 8px; background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }};"></div>
+                            <button type="button" class="btn btn-primary" id="apply_custom_color">Apply Color</button>
                         </div>
-                        <div class="col-auto">
-                            <input type="radio" class="btn-check" name="theme_color" id="theme_green" value="green" {% if theme_color == 'green' %}checked{% endif %}>
-                            <label class="btn btn-outline-success" for="theme_green">
-                                <i class="fas fa-circle" style="color: #198754;"></i> Green
-                            </label>
-                        </div>
-                        <div class="col-auto">
-                            <input type="radio" class="btn-check" name="theme_color" id="theme_purple" value="purple" {% if theme_color == 'purple' %}checked{% endif %}>
-                            <label class="btn btn-outline-secondary" for="theme_purple">
-                                <i class="fas fa-circle" style="color: #6f42c1;"></i> Purple
-                            </label>
-                        </div>
-                        <div class="col-auto">
-                            <input type="radio" class="btn-check" name="theme_color" id="theme_red" value="red" {% if theme_color == 'red' %}checked{% endif %}>
-                            <label class="btn btn-outline-danger" for="theme_red">
-                                <i class="fas fa-circle" style="color: #dc3545;"></i> Red
-                            </label>
-                        </div>
-                        <div class="col-auto">
-                            <input type="radio" class="btn-check" name="theme_color" id="theme_orange" value="orange" {% if theme_color == 'orange' %}checked{% endif %}>
-                            <label class="btn btn-outline-warning" for="theme_orange">
-                                <i class="fas fa-circle" style="color: #fd7e14;"></i> Orange
-                            </label>
-                        </div>
+                        <small class="text-muted">Pick any color from the color wheel</small>
                     </div>
-                    <small class="text-muted">Choose the primary color scheme for the application</small>
+                    
+                    <!-- Quick Preset Colors -->
+                    <div class="mb-3">
+                        <label class="form-label">Quick Presets</label>
+                        <div class="row g-2">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#0f6e84" style="background-color: #0f6e84; color: white;">
+                                    Blue
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#198754" style="background-color: #198754; color: white;">
+                                    Green
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6f42c1" style="background-color: #6f42c1; color: white;">
+                                    Purple
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#dc3545" style="background-color: #dc3545; color: white;">
+                                    Red
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#fd7e14" style="background-color: #fd7e14; color: white;">
+                                    Orange
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#e91e63" style="background-color: #e91e63; color: white;">
+                                    Pink
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#009688" style="background-color: #009688; color: white;">
+                                    Teal
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ff9800" style="background-color: #ff9800; color: white;">
+                                    Amber
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted">Click any preset to quickly apply</small>
+                    </div>
+                    
+                    <!-- Current Color Display -->
+                    <div class="current-theme-display p-3 border rounded" style="background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}; color: white;">
+                        <strong>Current Theme Color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}</strong>
+                    </div>
                 </div>
             </div>
         </div>
