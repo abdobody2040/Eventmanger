@@ -55,7 +55,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Theme is now fixed to light mode only
+    // Handle theme color change
+    const themeColorToggles = document.querySelectorAll('input[name="theme_color"]');
+    themeColorToggles.forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const themeColor = this.value;
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ theme_color: themeColor })
+                });
+                
+                if (response.ok) {
+                    // Apply theme color immediately
+                    applyThemeColor(themeColor);
+                    showAlert('Theme color updated successfully', 'success');
+                    // Reload page to apply theme fully
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    showAlert('Failed to update theme color', 'danger');
+                }
+            } catch (error) {
+                console.error('Error updating theme color:', error);
+                showAlert('Error updating theme color', 'danger');
+            }
+        });
+    });
 
     // Handle logo upload
     const logoInput = document.getElementById('app_logo');
@@ -419,6 +447,20 @@ function showAlert(message, type) {
     setTimeout(() => {
         alertDiv.remove();
     }, 3000);
+}
+
+// Apply theme color to document
+function applyThemeColor(color) {
+    const colorMap = {
+        'blue': '#0f6e84',
+        'green': '#198754',
+        'purple': '#6f42c1',
+        'red': '#dc3545',
+        'orange': '#fd7e14'
+    };
+    
+    const primaryColor = colorMap[color] || colorMap['blue'];
+    document.documentElement.style.setProperty('--primary', primaryColor);
 }
 
 // Confirm action before delete

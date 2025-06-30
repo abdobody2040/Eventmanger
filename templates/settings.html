@@ -40,6 +40,57 @@
 <!-- Alerts Container -->
 <div id="alerts_container"></div>
 
+<!-- Theme Color Settings -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-palette fa-lg icon"></i>
+        <h3 class="mb-0">Theme Colors</h3>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Primary Theme Color</label>
+                    <div class="row g-2">
+                        <div class="col-auto">
+                            <input type="radio" class="btn-check" name="theme_color" id="theme_blue" value="blue" {% if not theme_color or theme_color == 'blue' %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="theme_blue">
+                                <i class="fas fa-circle" style="color: #0f6e84;"></i> Blue
+                            </label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="radio" class="btn-check" name="theme_color" id="theme_green" value="green" {% if theme_color == 'green' %}checked{% endif %}>
+                            <label class="btn btn-outline-success" for="theme_green">
+                                <i class="fas fa-circle" style="color: #198754;"></i> Green
+                            </label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="radio" class="btn-check" name="theme_color" id="theme_purple" value="purple" {% if theme_color == 'purple' %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="theme_purple">
+                                <i class="fas fa-circle" style="color: #6f42c1;"></i> Purple
+                            </label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="radio" class="btn-check" name="theme_color" id="theme_red" value="red" {% if theme_color == 'red' %}checked{% endif %}>
+                            <label class="btn btn-outline-danger" for="theme_red">
+                                <i class="fas fa-circle" style="color: #dc3545;"></i> Red
+                            </label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="radio" class="btn-check" name="theme_color" id="theme_orange" value="orange" {% if theme_color == 'orange' %}checked{% endif %}>
+                            <label class="btn btn-outline-warning" for="theme_orange">
+                                <i class="fas fa-circle" style="color: #fd7e14;"></i> Orange
+                            </label>
+                        </div>
+                    </div>
+                    <small class="text-muted">Choose the primary color scheme for the application</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Application Details -->
 <div class="settings-section">
     <div class="settings-header d-flex align-items-center">
