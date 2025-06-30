@@ -5,10 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from flask_login import LoginManager
 from werkzeug.middleware.proxy_fix import ProxyFix
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 class ProductionConfig:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '').replace(
@@ -53,7 +49,7 @@ db.init_app(app)
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = "login"
+login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = "Please log in to access this page."
 login_manager.login_message_category = "warning"
 
@@ -74,7 +70,10 @@ with app.app_context():
     
     for key, value in settings.items():
         if not AppSetting.query.filter_by(key=key).first():
-            db.session.add(AppSetting(key=key, value=value))
+            setting = AppSetting()
+            setting.key = key
+            setting.value = value
+            db.session.add(setting)
     
     db.session.commit()
 
@@ -84,3 +83,6 @@ from models import User
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# Import routes to register them with the app
+import routes
