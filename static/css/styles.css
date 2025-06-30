@@ -262,6 +262,28 @@ body {
 
 .user-menu {
   min-width: 200px;
+  max-width: 280px;
+  right: 0 !important;
+  left: auto !important;
+  transform: none !important;
+  margin-top: 0.5rem;
+}
+
+/* Ensure dropdown stays within viewport */
+.dropdown-menu-end {
+  --bs-position: end;
+  right: 0 !important;
+  left: auto !important;
+}
+
+/* Fix for mobile devices */
+@media (max-width: 768px) {
+  .user-menu {
+    min-width: 180px;
+    right: 0 !important;
+    left: auto !important;
+    margin-right: 0;
+  }
 }
 
 .dropdown-role {
