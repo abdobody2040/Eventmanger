@@ -1,32 +1,42 @@
 // Dashboard JavaScript for PharmaEvents
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Category Chart
-    const categoryChartCtx = document.getElementById('categoryChart');
-    if (categoryChartCtx) {
-        initCategoryChart();
+    // Wait for Chart.js to be fully loaded
+    function initDashboard() {
+        if (typeof Chart === 'undefined') {
+            setTimeout(initDashboard, 100);
+            return;
+        }
+        
+        // Initialize Category Chart
+        const categoryChartCtx = document.getElementById('categoryChart');
+        if (categoryChartCtx) {
+            initCategoryChart();
+        }
+        
+        // Initialize Event Type Distribution Chart
+        const typeChartCtx = document.getElementById('typeChart');
+        if (typeChartCtx) {
+            initTypeChart();
+        }
+        
+        // Initialize Monthly Events Chart
+        const monthlyChartCtx = document.getElementById('monthlyChart');
+        if (monthlyChartCtx) {
+            initMonthlyChart();
+        }
+        
+        // Initialize Requester Chart
+        const requesterChartCtx = document.getElementById('requesterChart');
+        if (requesterChartCtx) {
+            initRequesterChart();
+        }
+        
+        // Load dashboard statistics
+        loadDashboardStats();
     }
     
-    // Initialize Event Type Distribution Chart
-    const typeChartCtx = document.getElementById('typeChart');
-    if (typeChartCtx) {
-        initTypeChart();
-    }
-    
-    // Initialize Monthly Events Chart
-    const monthlyChartCtx = document.getElementById('monthlyChart');
-    if (monthlyChartCtx) {
-        initMonthlyChart();
-    }
-    
-    // Initialize Requester Chart
-    const requesterChartCtx = document.getElementById('requesterChart');
-    if (requesterChartCtx) {
-        initRequesterChart();
-    }
-    
-    // Load dashboard statistics
-    loadDashboardStats();
+    initDashboard();
 });
 
 // Load dashboard statistics
