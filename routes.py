@@ -1012,11 +1012,13 @@ def migrate_db():
 def inject_settings():
     app_name = AppSetting.query.filter_by(key='app_name').first()
     theme_color = AppSetting.query.filter_by(key='theme_color').first()
+    app_logo = AppSetting.query.filter_by(key='app_logo').first()
 
     return {
         'app_name': app_name.value if app_name else 'PharmaEvents',
         'theme': 'light',
-        'theme_color': theme_color.value if theme_color else 'blue'
+        'theme_color': theme_color.value if theme_color else '#0f6e84',
+        'app_logo': app_logo.value if app_logo else None
     }
 
 # Initialize database with seed data    
