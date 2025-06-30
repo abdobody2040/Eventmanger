@@ -290,9 +290,6 @@ def create_event():
                     return redirect(url_for('create_event'))
             
             # All validations passed, continue with processing
-            if False:  # This condition will never be true, but maintains the original structure
-                flash('Invalid date or time format. Please use the date/time selectors.', 'danger')
-                return redirect(url_for('create_event'))
                 
             # Parse the datetime objects
             start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
@@ -381,7 +378,8 @@ def create_event():
                           venues=venues,
                           service_requests=service_requests,
                           employee_codes=employee_codes,
-                          governorates=governorates)
+                          governorates=governorates,
+                          edit_mode=False)
 
 @app.route('/edit-event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
