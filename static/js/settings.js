@@ -24,9 +24,15 @@ function updateSettings(data) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle application name update
+    // Load current app name on page load
     const nameInput = document.getElementById('app_name');
     const updateNameBtn = document.getElementById('update_name');
+    
+    // Set current app name value if available
+    if (nameInput && window.appName) {
+        nameInput.value = window.appName;
+    }
+    
     if (nameInput && updateNameBtn) {
         updateNameBtn.addEventListener('click', function() {
             const name = nameInput.value.trim();

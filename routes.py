@@ -555,14 +555,29 @@ def settings():
 
     # Get app settings
     app_name = AppSetting.query.filter_by(key='app_name').first()
+    if not app_name:
+        # Create default app name setting if it doesn't exist
+        app_name = AppSetting()
+        app_name.key = 'app_name'
+        app_name.value = 'PharmaEvents'
+        db.session.add(app_name)
+        db.session.commit()
+    
     theme_color = AppSetting.query.filter_by(key='theme_color').first()
+    if not theme_color:
+        # Create default theme color setting if it doesn't exist
+        theme_color = AppSetting()
+        theme_color.key = 'theme_color'
+        theme_color.value = '#0f6e84'
+        db.session.add(theme_color)
+        db.session.commit()
 
     return render_template('settings.html',
                           categories=categories,
                           event_types=event_types,
                           users=users,
-                          app_name=app_name.value if app_name else 'PharmaEvents',
-                          theme_color=theme_color.value if theme_color else 'blue')
+                          app_name=app_name.value,
+                          theme_color=theme_color.value)
 
 # API endpoints for settings
 @app.route('/api/settings', methods=['POST'])
