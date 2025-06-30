@@ -65,7 +65,7 @@ with app.app_context():
     # Initialize default settings if they don't exist
     settings = {
         'app_name': 'PharmaEvents',
-        'theme_color': 'blue'
+        'theme_color': '#0f6e84'
     }
     
     for key, value in settings.items():

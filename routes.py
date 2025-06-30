@@ -575,15 +575,18 @@ def update_settings():
         return jsonify({'error': 'No data provided'}), 400
 
     # Handle theme color change
-    if 'theme_color' in data and data['theme_color'] in ['blue', 'green', 'purple', 'red', 'orange']:
-        theme_color_setting = AppSetting.query.filter_by(key='theme_color').first()
-        if not theme_color_setting:
-            theme_color_setting = AppSetting()
-            theme_color_setting.key = 'theme_color'
-            theme_color_setting.value = 'blue'
-            db.session.add(theme_color_setting)
-        theme_color_setting.value = data['theme_color']
-        db.session.commit()
+    if 'theme_color' in data and data['theme_color']:
+        # Validate hex color format
+        theme_color = data['theme_color']
+        if isinstance(theme_color, str) and (theme_color.startswith('#') and len(theme_color) == 7):
+            theme_color_setting = AppSetting.query.filter_by(key='theme_color').first()
+            if not theme_color_setting:
+                theme_color_setting = AppSetting()
+                theme_color_setting.key = 'theme_color'
+                theme_color_setting.value = '#0f6e84'
+                db.session.add(theme_color_setting)
+            theme_color_setting.value = theme_color
+            db.session.commit()
 
     # Handle app name change
     if 'name' in data and data['name'] and data['name'].strip():

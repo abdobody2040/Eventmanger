@@ -14,21 +14,88 @@
   --info: #17a2b8;
 }
 
-/* Color Palette Styles */
-.color-palette-grid {
+/* Color Wheel Styles */
+.color-wheel-container {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-}
-
-.color-group {
+    padding: 1rem;
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 0.5rem;
-    padding: 1rem;
     background-color: rgba(0, 0, 0, 0.02);
 }
 
-.color-group-title {
+.color-wheel-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.color-wheel {
+    width: 80px;
+    height: 80px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.color-wheel:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.color-wheel::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-wheel::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+}
+
+.color-wheel::-moz-color-swatch {
+    border: none;
+    border-radius: 50%;
+}
+
+.color-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.color-preview-swatch {
+    width: 60px;
+    height: 60px;
+    border-radius: 0.5rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.color-preview-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.color-value {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--dark);
+    padding: 0.25rem 0.5rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0.25rem;
+    user-select: all;
+}
+
+.color-presets {
+    margin-top: 1rem;
+}
+
+.presets-title {
     margin-bottom: 0.75rem;
     font-size: 0.875rem;
     font-weight: 600;
@@ -37,51 +104,44 @@
     letter-spacing: 0.5px;
 }
 
-.color-options {
+.preset-colors {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
 }
 
-.color-input {
-    display: none;
-}
-
-.color-option {
-    width: 48px;
-    height: 48px;
-    border-radius: 0.5rem;
+.preset-color {
+    width: 36px;
+    height: 36px;
+    border: 2px solid transparent;
+    border-radius: 0.375rem;
     cursor: pointer;
-    border: 3px solid transparent;
     transition: all 0.2s ease;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.color-option:hover {
+.preset-color:hover {
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.8);
 }
 
-.color-input:checked + .color-option {
-    border-color: #fff;
-    box-shadow: 0 0 0 2px var(--primary), 0 4px 12px rgba(0, 0, 0, 0.3);
-    transform: scale(1.05);
+.preset-color:active {
+    transform: scale(0.95);
 }
 
-.color-input:checked + .color-option::after {
-    content: '✓';
-    color: white;
-    font-weight: bold;
-    font-size: 18px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-[data-bs-theme="dark"] .color-group {
+[data-bs-theme="dark"] .color-wheel-container {
     border-color: rgba(255, 255, 255, 0.1);
     background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-bs-theme="dark"] .color-value {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .color-preview-swatch {
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Theme Color Classes */

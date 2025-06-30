@@ -55,33 +55,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle theme color change
-    const themeColorToggles = document.querySelectorAll('input[name="theme_color"]');
-    themeColorToggles.forEach(toggle => {
-        toggle.addEventListener('change', async function() {
-            const themeColor = this.value;
-            try {
-                const response = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ theme_color: themeColor })
-                });
-                
-                if (response.ok) {
-                    // Apply theme color immediately
-                    applyThemeColor(themeColor);
-                    showAlert('Theme color updated successfully', 'success');
-                    // Reload page to apply theme fully
-                    setTimeout(() => window.location.reload(), 500);
-                } else {
-                    showAlert('Failed to update theme color', 'danger');
-                }
-            } catch (error) {
-                console.error('Error updating theme color:', error);
-                showAlert('Error updating theme color', 'danger');
-            }
+    // Handle color wheel change
+    const colorWheel = document.getElementById('color_wheel');
+    const colorPreview = document.getElementById('color_preview');
+    const colorValue = document.getElementById('color_value');
+    
+    if (colorWheel) {
+        colorWheel.addEventListener('input', function() {
+            const selectedColor = this.value;
+            updateColorPreview(selectedColor);
+        });
+        
+        colorWheel.addEventListener('change', async function() {
+            const selectedColor = this.value;
+            await updateThemeColor(selectedColor);
+        });
+    }
+
+    // Handle preset color buttons
+    const presetColors = document.querySelectorAll('.preset-color');
+    presetColors.forEach(button => {
+        button.addEventListener('click', async function() {
+            const selectedColor = this.getAttribute('data-color');
+            colorWheel.value = selectedColor;
+            updateColorPreview(selectedColor);
+            await updateThemeColor(selectedColor);
         });
     });
 
@@ -449,38 +447,50 @@ function showAlert(message, type) {
     }, 3000);
 }
 
-// Apply theme color to document
-function applyThemeColor(color) {
-    const colorMap = {
-        'blue': '#0f6e84',
-        'navy': '#1e3a8a',
-        'sky': '#0ea5e9',
-        'cyan': '#06b6d4',
-        'teal': '#0d9488',
-        'green': '#198754',
-        'emerald': '#10b981',
-        'lime': '#65a30d',
-        'mint': '#059669',
-        'purple': '#6f42c1',
-        'violet': '#8b5cf6',
-        'indigo': '#6366f1',
-        'lavender': '#a855f7',
-        'red': '#dc3545',
-        'rose': '#f43f5e',
-        'pink': '#ec4899',
-        'ruby': '#be123c',
-        'orange': '#fd7e14',
-        'amber': '#f59e0b',
-        'yellow': '#eab308',
-        'coral': '#ff6b6b',
-        'slate': '#475569',
-        'brown': '#92400e',
-        'bronze': '#cd7f32',
-        'charcoal': '#374151'
-    };
+// Update color preview elements
+function updateColorPreview(color) {
+    const colorPreview = document.getElementById('color_preview');
+    const colorValue = document.getElementById('color_value');
     
-    const primaryColor = colorMap[color] || colorMap['blue'];
-    document.documentElement.style.setProperty('--primary', primaryColor);
+    if (colorPreview) {
+        colorPreview.style.backgroundColor = color;
+    }
+    
+    if (colorValue) {
+        colorValue.textContent = color.toUpperCase();
+    }
+    
+    // Apply immediately to document
+    document.documentElement.style.setProperty('--primary', color);
+}
+
+// Update theme color via API
+async function updateThemeColor(color) {
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ theme_color: color })
+        });
+        
+        if (response.ok) {
+            showAlert('Theme color updated successfully', 'success');
+            // Reload page to apply theme fully after a short delay
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showAlert('Failed to update theme color', 'danger');
+        }
+    } catch (error) {
+        console.error('Error updating theme color:', error);
+        showAlert('Error updating theme color', 'danger');
+    }
+}
+
+// Apply theme color to document (legacy function for compatibility)
+function applyThemeColor(color) {
+    document.documentElement.style.setProperty('--primary', color);
 }
 
 // Confirm action before delete

@@ -52,119 +52,44 @@
             <div class="row">
                 <div class="col-12">
                     <label class="form-label">Primary Theme Color</label>
-                    <div class="color-palette-grid">
-                        <!-- Blues -->
-                        <div class="color-group">
-                            <h6 class="color-group-title">Blues</h6>
-                            <div class="color-options">
-                                <input type="radio" class="color-input" name="theme_color" id="theme_blue" value="blue" {% if not theme_color or theme_color == 'blue' %}checked{% endif %}>
-                                <label class="color-option" for="theme_blue" style="background-color: #0f6e84;" title="Ocean Blue"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_navy" value="navy" {% if theme_color == 'navy' %}checked{% endif %}>
-                                <label class="color-option" for="theme_navy" style="background-color: #1e3a8a;" title="Navy Blue"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_sky" value="sky" {% if theme_color == 'sky' %}checked{% endif %}>
-                                <label class="color-option" for="theme_sky" style="background-color: #0ea5e9;" title="Sky Blue"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_cyan" value="cyan" {% if theme_color == 'cyan' %}checked{% endif %}>
-                                <label class="color-option" for="theme_cyan" style="background-color: #06b6d4;" title="Cyan"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_teal" value="teal" {% if theme_color == 'teal' %}checked{% endif %}>
-                                <label class="color-option" for="theme_teal" style="background-color: #0d9488;" title="Teal"></label>
+                    <div class="color-wheel-container">
+                        <div class="color-wheel-wrapper">
+                            <input type="color" id="color_wheel" class="color-wheel" value="{% if theme_color %}{{ theme_color }}{% else %}#0f6e84{% endif %}">
+                            <div class="color-preview">
+                                <div class="color-preview-swatch" id="color_preview" style="background-color: {% if theme_color %}{{ theme_color }}{% else %}#0f6e84{% endif %};"></div>
+                                <div class="color-preview-info">
+                                    <span class="color-value" id="color_value">{% if theme_color %}{{ theme_color }}{% else %}#0f6e84{% endif %}</span>
+                                    <small class="text-muted">Selected Color</small>
+                                </div>
                             </div>
                         </div>
-                        
-                        <!-- Greens -->
-                        <div class="color-group">
-                            <h6 class="color-group-title">Greens</h6>
-                            <div class="color-options">
-                                <input type="radio" class="color-input" name="theme_color" id="theme_green" value="green" {% if theme_color == 'green' %}checked{% endif %}>
-                                <label class="color-option" for="theme_green" style="background-color: #198754;" title="Forest Green"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_emerald" value="emerald" {% if theme_color == 'emerald' %}checked{% endif %}>
-                                <label class="color-option" for="theme_emerald" style="background-color: #10b981;" title="Emerald"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_lime" value="lime" {% if theme_color == 'lime' %}checked{% endif %}>
-                                <label class="color-option" for="theme_lime" style="background-color: #65a30d;" title="Lime"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_mint" value="mint" {% if theme_color == 'mint' %}checked{% endif %}>
-                                <label class="color-option" for="theme_mint" style="background-color: #059669;" title="Mint"></label>
-                            </div>
-                        </div>
-                        
-                        <!-- Purples -->
-                        <div class="color-group">
-                            <h6 class="color-group-title">Purples</h6>
-                            <div class="color-options">
-                                <input type="radio" class="color-input" name="theme_color" id="theme_purple" value="purple" {% if theme_color == 'purple' %}checked{% endif %}>
-                                <label class="color-option" for="theme_purple" style="background-color: #6f42c1;" title="Royal Purple"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_violet" value="violet" {% if theme_color == 'violet' %}checked{% endif %}>
-                                <label class="color-option" for="theme_violet" style="background-color: #8b5cf6;" title="Violet"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_indigo" value="indigo" {% if theme_color == 'indigo' %}checked{% endif %}>
-                                <label class="color-option" for="theme_indigo" style="background-color: #6366f1;" title="Indigo"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_lavender" value="lavender" {% if theme_color == 'lavender' %}checked{% endif %}>
-                                <label class="color-option" for="theme_lavender" style="background-color: #a855f7;" title="Lavender"></label>
-                            </div>
-                        </div>
-                        
-                        <!-- Reds & Pinks -->
-                        <div class="color-group">
-                            <h6 class="color-group-title">Reds & Pinks</h6>
-                            <div class="color-options">
-                                <input type="radio" class="color-input" name="theme_color" id="theme_red" value="red" {% if theme_color == 'red' %}checked{% endif %}>
-                                <label class="color-option" for="theme_red" style="background-color: #dc3545;" title="Crimson Red"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_rose" value="rose" {% if theme_color == 'rose' %}checked{% endif %}>
-                                <label class="color-option" for="theme_rose" style="background-color: #f43f5e;" title="Rose"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_pink" value="pink" {% if theme_color == 'pink' %}checked{% endif %}>
-                                <label class="color-option" for="theme_pink" style="background-color: #ec4899;" title="Pink"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_ruby" value="ruby" {% if theme_color == 'ruby' %}checked{% endif %}>
-                                <label class="color-option" for="theme_ruby" style="background-color: #be123c;" title="Ruby"></label>
-                            </div>
-                        </div>
-                        
-                        <!-- Oranges & Yellows -->
-                        <div class="color-group">
-                            <h6 class="color-group-title">Oranges & Yellows</h6>
-                            <div class="color-options">
-                                <input type="radio" class="color-input" name="theme_color" id="theme_orange" value="orange" {% if theme_color == 'orange' %}checked{% endif %}>
-                                <label class="color-option" for="theme_orange" style="background-color: #fd7e14;" title="Tangerine"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_amber" value="amber" {% if theme_color == 'amber' %}checked{% endif %}>
-                                <label class="color-option" for="theme_amber" style="background-color: #f59e0b;" title="Amber"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_yellow" value="yellow" {% if theme_color == 'yellow' %}checked{% endif %}>
-                                <label class="color-option" for="theme_yellow" style="background-color: #eab308;" title="Golden Yellow"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_coral" value="coral" {% if theme_color == 'coral' %}checked{% endif %}>
-                                <label class="color-option" for="theme_coral" style="background-color: #ff6b6b;" title="Coral"></label>
-                            </div>
-                        </div>
-                        
-                        <!-- Neutrals & Others -->
-                        <div class="color-group">
-                            <h6 class="color-group-title">Neutrals & Others</h6>
-                            <div class="color-options">
-                                <input type="radio" class="color-input" name="theme_color" id="theme_slate" value="slate" {% if theme_color == 'slate' %}checked{% endif %}>
-                                <label class="color-option" for="theme_slate" style="background-color: #475569;" title="Slate"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_brown" value="brown" {% if theme_color == 'brown' %}checked{% endif %}>
-                                <label class="color-option" for="theme_brown" style="background-color: #92400e;" title="Brown"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_bronze" value="bronze" {% if theme_color == 'bronze' %}checked{% endif %}>
-                                <label class="color-option" for="theme_bronze" style="background-color: #cd7f32;" title="Bronze"></label>
-                                
-                                <input type="radio" class="color-input" name="theme_color" id="theme_charcoal" value="charcoal" {% if theme_color == 'charcoal' %}checked{% endif %}>
-                                <label class="color-option" for="theme_charcoal" style="background-color: #374151;" title="Charcoal"></label>
+                        <div class="color-presets">
+                            <h6 class="presets-title">Quick Presets</h6>
+                            <div class="preset-colors">
+                                <button type="button" class="preset-color" data-color="#0f6e84" style="background-color: #0f6e84;" title="Ocean Blue"></button>
+                                <button type="button" class="preset-color" data-color="#1e3a8a" style="background-color: #1e3a8a;" title="Navy Blue"></button>
+                                <button type="button" class="preset-color" data-color="#0ea5e9" style="background-color: #0ea5e9;" title="Sky Blue"></button>
+                                <button type="button" class="preset-color" data-color="#06b6d4" style="background-color: #06b6d4;" title="Cyan"></button>
+                                <button type="button" class="preset-color" data-color="#0d9488" style="background-color: #0d9488;" title="Teal"></button>
+                                <button type="button" class="preset-color" data-color="#198754" style="background-color: #198754;" title="Forest Green"></button>
+                                <button type="button" class="preset-color" data-color="#10b981" style="background-color: #10b981;" title="Emerald"></button>
+                                <button type="button" class="preset-color" data-color="#65a30d" style="background-color: #65a30d;" title="Lime"></button>
+                                <button type="button" class="preset-color" data-color="#6f42c1" style="background-color: #6f42c1;" title="Royal Purple"></button>
+                                <button type="button" class="preset-color" data-color="#8b5cf6" style="background-color: #8b5cf6;" title="Violet"></button>
+                                <button type="button" class="preset-color" data-color="#6366f1" style="background-color: #6366f1;" title="Indigo"></button>
+                                <button type="button" class="preset-color" data-color="#dc3545" style="background-color: #dc3545;" title="Crimson Red"></button>
+                                <button type="button" class="preset-color" data-color="#f43f5e" style="background-color: #f43f5e;" title="Rose"></button>
+                                <button type="button" class="preset-color" data-color="#ec4899" style="background-color: #ec4899;" title="Pink"></button>
+                                <button type="button" class="preset-color" data-color="#fd7e14" style="background-color: #fd7e14;" title="Orange"></button>
+                                <button type="button" class="preset-color" data-color="#f59e0b" style="background-color: #f59e0b;" title="Amber"></button>
+                                <button type="button" class="preset-color" data-color="#eab308" style="background-color: #eab308;" title="Yellow"></button>
+                                <button type="button" class="preset-color" data-color="#475569" style="background-color: #475569;" title="Slate"></button>
+                                <button type="button" class="preset-color" data-color="#92400e" style="background-color: #92400e;" title="Brown"></button>
+                                <button type="button" class="preset-color" data-color="#374151" style="background-color: #374151;" title="Charcoal"></button>
                             </div>
                         </div>
                     </div>
-                    <small class="text-muted">Choose the primary color scheme for the application. Click on any color to apply it as your theme.</small>
+                    <small class="text-muted">Use the color wheel to select any color, or click on a preset color below. The theme will update automatically.</small>
                 </div>
             </div>
         </div>
