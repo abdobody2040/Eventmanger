@@ -7,7 +7,13 @@
     <div class="row justify-content-center align-items-center">
         <div class="col-lg-5 login-left d-none d-lg-block">
             <div class="text-center mb-4">
-                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ app_name }} Logo" width="80" height="80">
+                {% if app_logo %}
+                    <img src="{{ url_for('uploaded_file', filename=app_logo) }}" alt="{{ app_name }} Logo" width="80" height="80" style="object-fit: contain;">
+                {% else %}
+                    <div class="mx-auto d-flex align-items-center justify-content-center bg-primary text-white rounded-circle" style="width: 80px; height: 80px; font-size: 36px; font-weight: bold;">
+                        {{ app_name[0] if app_name else 'E' }}
+                    </div>
+                {% endif %}
                 <h1 class="mt-3 login-title">{{ app_name }}</h1>
                 <p class="text-muted">Compliance-Driven Event Management</p>
             </div>
