@@ -129,27 +129,44 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoInput && uploadLogoBtn) {
         uploadLogoBtn.addEventListener('click', function() {
             const file = logoInput.files[0];
-            if (file) {
-                const formData = new FormData();
-                formData.append('logo', file);
-
-                fetch('/api/settings/logo', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showAlert('Logo updated successfully', 'success');
-                    } else {
-                        showAlert('Error updating logo', 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showAlert('Error updating logo', 'danger');
-                });
+            if (!file) {
+                showAlert('Please select a file first', 'warning');
+                return;
             }
+            
+            // Validate file type
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+            if (!allowedTypes.includes(file.type)) {
+                showAlert('Please select a PNG, JPG, or SVG file', 'danger');
+                return;
+            }
+            
+            // Validate file size (2MB max)
+            if (file.size > 2 * 1024 * 1024) {
+                showAlert('File size must be less than 2MB', 'danger');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('logo', file);
+
+            fetch('/api/settings/logo', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Logo updated successfully! Refreshing page...', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(data.error || 'Error updating logo', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error updating logo', 'danger');
+            });
         });
     }
 

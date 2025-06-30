@@ -619,42 +619,62 @@ def update_settings():
 @login_required
 @admin_required
 def update_logo():
-    if 'logo' not in request.files:
-        return jsonify({'success': False, 'error': 'No file part'})
+    try:
+        if 'logo' not in request.files:
+            return jsonify({'success': False, 'error': 'No file part'}), 400
+            
+        file = request.files['logo']
         
-    file = request.files['logo']
-    
-    if file.filename == '':
-        return jsonify({'success': False, 'error': 'No selected file'})
+        if not file or file.filename == '':
+            return jsonify({'success': False, 'error': 'No selected file'}), 400
         
-    if file and file.filename and allowed_file(file.filename):
-        # Ensure filename is not None before passing to secure_filename
-        original_filename = file.filename or "upload"
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'svg'}
+        if not file.filename or '.' not in file.filename:
+            return jsonify({'success': False, 'error': 'Invalid file format'}), 400
+            
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        if file_extension not in allowed_extensions:
+            return jsonify({'success': False, 'error': 'Only PNG, JPG, JPEG, and SVG files are allowed'}), 400
+        
+        # Ensure upload directory exists
+        upload_path = app.config['UPLOAD_FOLDER']
+        if not os.path.exists(upload_path):
+            os.makedirs(upload_path)
+        
+        # Generate secure filename
+        original_filename = file.filename or "logo"
         filename = secure_filename(original_filename)
-        # Generate unique filename
         unique_filename = f"logo_{uuid.uuid4()}_{filename}"
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        file_path = os.path.join(upload_path, unique_filename)
+        
+        # Save the file
+        file.save(file_path)
         
         # Update or create logo setting
         logo_setting = AppSetting.query.filter_by(key='app_logo').first()
         if not logo_setting:
             logo_setting = AppSetting()
             logo_setting.key = 'app_logo'
-            logo_setting.value = unique_filename
             db.session.add(logo_setting)
         else:
             # Remove old logo file if it exists
             if logo_setting.value:
-                old_logo_path = os.path.join(app.config['UPLOAD_FOLDER'], logo_setting.value)
+                old_logo_path = os.path.join(upload_path, logo_setting.value)
                 if os.path.exists(old_logo_path):
-                    os.remove(old_logo_path)
-            
-            logo_setting.value = unique_filename
+                    try:
+                        os.remove(old_logo_path)
+                    except OSError:
+                        pass  # Continue even if old file can't be removed
         
+        logo_setting.value = unique_filename
         db.session.commit()
-        return jsonify({'success': True})
+        
+        return jsonify({'success': True, 'filename': unique_filename})
     
-    return jsonify({'success': False, 'error': 'Invalid file type'})
+    except Exception as e:
+        app.logger.error(f"Error updating logo: {str(e)}")
+        return jsonify({'success': False, 'error': 'Server error occurred'}), 500
 
 @app.route('/api/categories', methods=['POST'])
 @login_required
@@ -1004,11 +1024,13 @@ def migrate_db():
 def inject_settings():
     app_name = AppSetting.query.filter_by(key='app_name').first()
     theme_color = AppSetting.query.filter_by(key='theme_color').first()
+    app_logo = AppSetting.query.filter_by(key='app_logo').first()
     
     return {
         'app_name': app_name.value if app_name else 'PharmaEvents',
         'theme': 'light',
-        'theme_color': theme_color.value if theme_color else 'blue'
+        'theme_color': theme_color.value if theme_color else 'blue',
+        'app_logo': app_logo.value if app_logo else None
     }
 
 # Initialize database with seed data    
