@@ -63,8 +63,17 @@ def forgot_password():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Get counts
-    upcoming_events = Event.query.filter(Event.start_datetime > datetime.utcnow()).count()
+    # Get counts - filter by user role for upcoming events
+    upcoming_events_count_query = Event.query.filter(Event.start_datetime > datetime.utcnow())
+    if not current_user.is_admin():
+        upcoming_events_count_query = upcoming_events_count_query.filter(
+            db.or_(
+                Event.status == 'approved',
+                Event.user_id == current_user.id
+            )
+        )
+    upcoming_events = upcoming_events_count_query.count()
+    
     online_events = Event.query.filter_by(is_online=True).count()
     offline_events = Event.query.filter_by(is_online=False).count()
     total_events = Event.query.count()
@@ -88,19 +97,22 @@ def dashboard():
             })
     
     # Get upcoming events
-    upcoming_events_list = Event.query.filter(Event.start_datetime > datetime.utcnow())
+    upcoming_events_query = Event.query.filter(Event.start_datetime > datetime.utcnow())
     
     # Filter by status depending on user role
     if not current_user.is_admin():
         # Regular users only see approved events or their own
-        upcoming_events_list = upcoming_events_list.filter(
+        upcoming_events_query = upcoming_events_query.filter(
             db.or_(
                 Event.status == 'approved',
                 Event.user_id == current_user.id
             )
         )
+    else:
+        # Admins see all upcoming events regardless of status
+        pass
     
-    upcoming_events_list = upcoming_events_list.order_by(Event.start_datetime).limit(5).all()
+    upcoming_events_list = upcoming_events_query.order_by(Event.start_datetime).limit(5).all()
     
     # Get recent events
     recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
