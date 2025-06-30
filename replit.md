@@ -102,6 +102,13 @@ PharmaEvents is a web-based event management application designed specifically f
 
 ```
 Changelog:
+- June 30, 2025. Fixed application startup issues
+  - Removed dotenv dependency causing import errors
+  - Fixed Chart.js loading timing issues on dashboard
+  - Fixed create_event template missing edit_mode variable
+  - Enhanced user dropdown menu positioning and responsiveness
+  - Added viewport boundary constraints for dropdown menus
+  - Improved mobile device compatibility for navigation
 - June 14, 2025. Initial setup
 ```
 

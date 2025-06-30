@@ -13,6 +13,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Popover(popoverTriggerEl);
     });
 
+    // Initialize user dropdown with proper positioning
+    const userDropdown = document.getElementById('userMenuDropdown');
+    if (userDropdown) {
+        const dropdown = new bootstrap.Dropdown(userDropdown, {
+            boundary: 'viewport',
+            display: 'static'
+        });
+        
+        // Add event listener to ensure proper positioning
+        userDropdown.addEventListener('shown.bs.dropdown', function () {
+            const dropdownMenu = this.nextElementSibling;
+            const rect = this.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            
+            // Ensure dropdown doesn't go off screen on the right
+            if (rect.right + dropdownMenu.offsetWidth > viewportWidth) {
+                dropdownMenu.style.right = '0';
+                dropdownMenu.style.left = 'auto';
+                dropdownMenu.style.transform = 'translateX(0)';
+            }
+        });
+    }
+
     // Custom file input label
     const fileInputs = document.querySelectorAll('.custom-file-input');
     fileInputs.forEach(input => {
