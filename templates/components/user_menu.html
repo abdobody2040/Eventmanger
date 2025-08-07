@@ -1,0 +1,69 @@
+<div class="dropdown">
+    <button class="btn btn-link text-white text-decoration-none dropdown-toggle d-flex align-items-center" 
+            type="button" 
+            id="userMenuDropdown" 
+            data-bs-toggle="dropdown" 
+            data-bs-auto-close="true"
+            data-bs-boundary="viewport"
+            aria-expanded="false">
+        <div class="user-avatar me-2">
+            {{ current_user.email[0]|upper }}
+        </div>
+        <span class="d-none d-md-inline">
+            {{ current_user.email }}
+        </span>
+    </button>
+    
+    <ul class="dropdown-menu dropdown-menu-end user-menu" aria-labelledby="userMenuDropdown" data-bs-boundary="viewport" data-bs-display="static">
+        <li>
+            <div class="dropdown-item-text">
+                <div class="fw-bold">{{ current_user.email }}</div>
+                <div class="small text-muted">{{ current_user.role|upper }}</div>
+            </div>
+        </li>
+        
+        <li><hr class="dropdown-divider"></li>
+        
+        {% if current_user.is_admin() %}
+            <li>
+                <a class="dropdown-item" href="{{ url_for('settings') }}">
+                    <i class="fas fa-cog me-2"></i> Settings
+                </a>
+            </li>
+        {% endif %}
+        
+        <li>
+            <a class="dropdown-item" href="{{ url_for('logout') }}">
+                <i class="fas fa-sign-out-alt me-2"></i> Log out
+            </a>
+        </li>
+        
+        {% if current_user.is_admin() %}
+            <li><hr class="dropdown-divider"></li>
+            
+            <li>
+                <span class="dropdown-item-text dropdown-role">
+                    <small>Switch Role</small>
+                </span>
+            </li>
+            
+            <li>
+                <a class="dropdown-item dropdown-role-item active" href="#">
+                    <i class="fas fa-check me-2"></i> ADMIN
+                </a>
+            </li>
+            
+            <li>
+                <a class="dropdown-item dropdown-role-item" href="#">
+                    MEDICAL REP
+                </a>
+            </li>
+            
+            <li>
+                <a class="dropdown-item dropdown-role-item" href="#">
+                    SALES/MARKETING
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</div>

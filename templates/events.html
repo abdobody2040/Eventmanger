@@ -1,0 +1,267 @@
+{% extends "layout.html" %}
+
+{% block title %}Events - PharmaEvents{% endblock %}
+
+{% block styles %}
+<style>
+    .event-card {
+        height: 100%;
+    }
+
+    .event-banner {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+    }
+
+    .event-banner img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .event-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+
+    .card-category {
+        display: inline-block;
+        margin-right: 0.25rem;
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background-color: rgba(15, 110, 132, 0.1);
+        color: #0f6e84;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .event-info {
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .event-info i {
+        width: 1rem;
+        text-align: center;
+        margin-right: 0.5rem;
+    }
+
+    .filters-container {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h2 mb-0">Events</h1>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('export_events') }}" class="btn btn-secondary me-2">
+            <i class="fas fa-file-export me-2"></i> Export Events
+        </a>
+        <a href="{{ url_for('create_event') }}" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-2"></i> Create New Event
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="search_form" class="row g-3">
+            <div class="col-md-6 col-lg-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="search_input" name="search" placeholder="Search events..." value="{{ search_query or '' }}">
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <select class="form-select filter-control" id="category_filter" name="category">
+                    <option value="all">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if selected_category == category.id|string %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <select class="form-select filter-control" id="type_filter" name="type">
+                    <option value="all">All Types</option>
+                    {% for type in event_types %}
+                        <option value="{{ type.id }}" {% if selected_type == type.id|string %}selected{% endif %}>
+                            {{ type.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <select class="form-select filter-control" id="date_filter" name="date">
+                    <option value="all" {% if selected_date == 'all' %}selected{% endif %}>All Dates</option>
+                    <option value="upcoming" {% if selected_date == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                    <option value="past" {% if selected_date == 'past' %}selected{% endif %}>Past</option>
+                </select>
+            </div>
+
+            {% if current_user.can_approve_events() %}
+            <div class="col-md-6 col-lg-3">
+                <select class="form-select filter-control" id="status_filter" name="status">
+                    <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All Status</option>
+                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending Approval</option>
+                    <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="declined" {% if selected_status == 'declined' %}selected{% endif %}>Declined</option>
+                </select>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Events Container -->
+<div class="row" id="events_container">
+    {% if events %}
+        {% for event in events %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card event-card">
+                    <div class="event-banner">
+                        <span class="badge event-badge {% if event.is_online %}bg-info{% else %}bg-success{% endif %}">
+                            {{ event.status if event.status else 'Active' }}
+                        </span>
+
+                        <!-- Approval status badge -->
+                        {% if event.status == 'pending' %}
+                            <span class="badge bg-warning position-absolute" style="right: 10px; top: 10px;">
+                                <i class="fas fa-hourglass-half me-1"></i> Pending
+                            </span>
+                        {% elif event.status == 'declined' %}
+                            <span class="badge bg-danger position-absolute" style="right: 10px; top: 10px;">
+                                <i class="fas fa-times-circle me-1"></i> Declined
+                            </span>
+                        {% elif event.status == 'active' %}
+                            <span class="badge bg-success position-absolute" style="right: 10px; top: 10px;">
+                                <i class="fas fa-check-circle me-1"></i> Active
+                            </span>
+                        {% endif %}
+
+                        {% if event.image_file %}
+                            <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" alt="{{ event.name }}">
+                        {% elif event.image_url %}
+                            <img src="{{ event.image_url }}" alt="{{ event.name }}">
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                <i class="fas fa-calendar-alt text-muted fa-4x"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-body">
+                        <h5 class="card-title text-truncate">{{ event.name }}</h5>
+
+                        <div class="mb-2">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas {% if event.event_type %}fa-tag{% else %}fa-question-circle{% endif %} me-1"></i>
+                                {% if event.event_type %}{{ event.event_type.name }}{% else %}Unspecified{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="event-info">
+                            <i class="far fa-calendar-alt text-muted"></i>
+                            {{ event.start_datetime.strftime('%b %d, %Y %I:%M %p') }}
+                            {% if event.start_datetime.date() != event.end_datetime.date() %}
+                                - {{ event.end_datetime.strftime('%b %d, %Y %I:%M %p') }}
+                            {% else %}
+                                - {{ event.end_datetime.strftime('%I:%M %p') }}
+                            {% endif %}
+                        </div>
+
+                        <div class="event-info">
+                            <i class="fas {% if event.is_online %}fa-laptop{% else %}fa-map-marker-alt{% endif %} text-muted"></i>
+                            {% if event.is_online %}
+                                Online
+                            {% else %}
+                                {% if event.venue_details %}
+                                    {{ event.venue_details.name }}, {{ event.governorate }}
+                                {% else %}
+                                    {{ event.governorate }}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        {% if event.categories %}
+                            <div class="mt-2 mb-3">
+                                {% for category in event.categories %}
+                                    <span class="card-category">{{ category.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-footer bg-white border-top-0">
+                        <!-- Approval buttons for admins and event managers -->
+                        {% if current_user.can_approve_events() and event.status == 'pending' %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <form method="POST" action="{{ url_for('approve_event', event_id=event.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check me-1"></i> Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('reject_event', event_id=event.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-times me-1"></i> Decline
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-edit me-1"></i> Edit
+                                </a>
+
+                                {% if current_user.can_approve_events() %}
+                                    <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Are you sure you want to delete event \'{{ event.name }}\'? This action cannot be undone.')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash-alt me-1"></i> Delete
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i> No events found matching your criteria.
+                {% if search_query or selected_category != 'all' or selected_type != 'all' or selected_date != 'all' %}
+                    <a href="{{ url_for('events') }}" class="alert-link ms-2">Clear filters</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+{% endblock %}

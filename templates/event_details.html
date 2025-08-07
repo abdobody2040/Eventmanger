@@ -1,0 +1,221 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ event.name }} - Event Details - PharmaEvents{% endblock %}
+
+{% block styles %}
+<style>
+    .event-header {
+        background: linear-gradient(135deg, {{ theme_color }}20 0%, {{ theme_color }}10 100%);
+        border-radius: 0.5rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .event-image {
+        max-height: 300px;
+        width: 100%;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    
+    .info-section {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item i {
+        width: 2rem;
+        text-align: center;
+        color: {{ theme_color }};
+        margin-right: 1rem;
+    }
+    
+    .category-badge {
+        display: inline-block;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        background-color: {{ theme_color }}20;
+        color: {{ theme_color }};
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('events') }}">Events</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ event.name }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('events') }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-2"></i> Back to Events
+        </a>
+        <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit me-2"></i> Edit Event
+        </a>
+    </div>
+</div>
+
+<div class="event-header">
+    <div class="row">
+        <div class="col-md-8">
+            <h1 class="h2 mb-2">{{ event.name }}</h1>
+            <div class="d-flex align-items-center mb-3">
+                <span class="badge bg-primary me-2">
+                    {% if event.event_type %}{{ event.event_type.name }}{% else %}Event{% endif %}
+                </span>
+                <span class="badge {% if event.is_online %}bg-info{% else %}bg-success{% endif %}">
+                    {% if event.is_online %}Online{% else %}In-Person{% endif %}
+                </span>
+                {% if event.status %}
+                <span class="badge 
+                    {% if event.status == 'approved' %}bg-success
+                    {% elif event.status == 'pending' %}bg-warning
+                    {% elif event.status == 'rejected' %}bg-danger
+                    {% else %}bg-secondary{% endif %} ms-2">
+                    {{ event.status.title() }}
+                </span>
+                {% endif %}
+            </div>
+            {% if event.description %}
+            <p class="text-muted mb-0">{{ event.description }}</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            {% if event.image_file %}
+            <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" alt="{{ event.name }}" class="event-image">
+            {% elif event.image_url %}
+            <img src="{{ event.image_url }}" alt="{{ event.name }}" class="event-image">
+            {% else %}
+            <div class="d-flex align-items-center justify-content-center event-image bg-light">
+                <i class="fas fa-calendar-alt text-muted fa-4x"></i>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="info-section">
+            <h4 class="mb-3">Event Details</h4>
+            
+            <div class="info-item">
+                <i class="fas fa-calendar-alt"></i>
+                <div>
+                    <strong>Start Date & Time</strong><br>
+                    <span class="text-muted">{{ event.start_datetime.strftime('%A, %B %d, %Y at %I:%M %p') }}</span>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <i class="fas fa-calendar-check"></i>
+                <div>
+                    <strong>End Date & Time</strong><br>
+                    <span class="text-muted">{{ event.end_datetime.strftime('%A, %B %d, %Y at %I:%M %p') }}</span>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <i class="fas {% if event.is_online %}fa-laptop{% else %}fa-map-marker-alt{% endif %}"></i>
+                <div>
+                    <strong>Location</strong><br>
+                    <span class="text-muted">
+                        {% if event.is_online %}
+                            Online Event
+                        {% else %}
+                            {% if event.venue_details %}
+                                {{ event.venue_details.name }}<br>
+                                {{ event.governorate }}
+                            {% else %}
+                                {{ event.governorate }}
+                            {% endif %}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            {% if event.categories %}
+            <div class="info-item">
+                <i class="fas fa-tags"></i>
+                <div>
+                    <strong>Categories</strong><br>
+                    {% for category in event.categories %}
+                        <span class="category-badge">{{ category.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="info-section">
+            <h4 class="mb-3">Event Management</h4>
+            
+            <div class="info-item">
+                <i class="fas fa-user"></i>
+                <div>
+                    <strong>Created By</strong><br>
+                    <span class="text-muted">{{ event.user.email if event.user else 'System' }}</span>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <strong>Created On</strong><br>
+                    <span class="text-muted">{{ event.created_at.strftime('%B %d, %Y at %I:%M %p') if event.created_at else 'N/A' }}</span>
+                </div>
+            </div>
+            
+            {% if event.attendees_file %}
+            <div class="info-item">
+                <i class="fas fa-users"></i>
+                <div>
+                    <strong>Attendees List</strong><br>
+                    <span class="text-muted">{{ event.attendees_file }}</span>
+                    <br>
+                    <a href="{{ url_for('uploaded_file', filename=event.attendees_file) }}" class="btn btn-sm btn-outline-primary mt-1">
+                        <i class="fas fa-download me-1"></i> Download
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if current_user.is_admin() and event.status == 'pending' %}
+            <div class="mt-4">
+                <h5 class="mb-3">Admin Actions</h5>
+                <div class="d-flex gap-2">
+                    <form method="POST" action="{{ url_for('approve_event', event_id=event.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to approve this event?')">
+                            <i class="fas fa-check me-1"></i> Approve Event
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('reject_event', event_id=event.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this event?')">
+                            <i class="fas fa-times me-1"></i> Reject Event
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

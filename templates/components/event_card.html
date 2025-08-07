@@ -1,0 +1,93 @@
+<div class="card event-card h-100">
+    <div class="event-banner">
+        <span class="badge event-badge {% if event.is_online %}bg-info{% else %}bg-success{% endif %}">
+            {{ event.get_status() }}
+        </span>
+        
+        {% if event.image_file %}
+            <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" alt="{{ event.name }}" class="card-img-top">
+        {% elif event.image_url %}
+            <img src="{{ event.image_url }}" alt="{{ event.name }}" class="card-img-top">
+        {% else %}
+            <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                <i class="fas fa-calendar-alt text-muted fa-4x"></i>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-body">
+        <h5 class="card-title text-truncate">{{ event.name }}</h5>
+        
+        <div class="mb-2">
+            <span class="badge bg-secondary me-1">
+                {% if event.event_type %}{{ event.event_type.name }}{% else %}Event{% endif %}
+            </span>
+        </div>
+        
+        <div class="event-info mb-2">
+            <i class="far fa-calendar-alt event-info-icon"></i>
+            <span>
+                {{ event.start_datetime.strftime('%d %b %Y') }}
+                {% if event.start_datetime.date() != event.end_datetime.date() %}
+                    - {{ event.end_datetime.strftime('%d %b %Y') }}
+                {% endif %}
+            </span>
+        </div>
+        
+        <div class="event-info mb-2">
+            <i class="far fa-clock event-info-icon"></i>
+            <span>
+                {{ event.start_datetime.strftime('%H:%M') }} - {{ event.end_datetime.strftime('%H:%M') }}
+            </span>
+        </div>
+        
+        <div class="event-info mb-3">
+            <i class="fas {% if event.is_online %}fa-laptop{% else %}fa-map-marker-alt{% endif %} event-info-icon"></i>
+            <span class="text-truncate">
+                {% if event.is_online %}
+                    Online
+                {% else %}
+                    {% if event.venue_details %}
+                        {{ event.venue_details.name }}, {{ event.governorate }}
+                    {% else %}
+                        {{ event.governorate }}
+                    {% endif %}
+                {% endif %}
+            </span>
+        </div>
+        
+        {% if event.categories %}
+            <div>
+                {% for category in event.categories[:3] %}
+                    <span class="event-category">{{ category.name }}</span>
+                {% endfor %}
+                
+                {% if event.categories|length > 3 %}
+                    <span class="event-category">+{{ event.categories|length - 3 }} more</span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-footer bg-white">
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-eye me-1"></i> View Details
+            </a>
+            
+            <div>
+                <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-edit"></i>
+                </a>
+                
+                {% if current_user.is_admin() %}
+                    <button class="btn btn-sm btn-outline-danger btn-delete-event" 
+                            data-event-id="{{ event.id }}" 
+                            data-event-name="{{ event.name }}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
