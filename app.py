@@ -71,7 +71,8 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": os.environ.get('DB_POOL_PRE_PING', 'True').lower() == 'true',
     "pool_reset_on_return": os.environ.get('DB_POOL_RESET_ON_RETURN', 'commit'),
     "connect_args": {
-        "options": "-c statement_timeout=30000 -c lock_timeout=10000"
+        "options": "-c statement_timeout=30000 -c lock_timeout=10000 -c idle_in_transaction_session_timeout=300000",
+        "connect_timeout": 30
     }
 }
 
@@ -86,8 +87,8 @@ cache = Cache(app, config={
 
 # Initialize rate limiter
 limiter = Limiter(
-    app,
     key_func=get_remote_address,
+    app=app,
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://",
     headers_enabled=True
@@ -512,9 +513,12 @@ def close_db_session(exception=None):
     try:
         if exception:
             db.session.rollback()
-        db.session.remove()
+        else:
+            db.session.commit()
     except Exception:
-        pass
+        db.session.rollback()
+    finally:
+        db.session.remove()
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -828,12 +832,21 @@ def create_event():
                                          categories=categories, event_types=event_types, 
                                          governorates=egyptian_governorates, edit_mode=False)
 
-                # Save the file
-                upload_folder = os.path.join(app.static_folder or 'static', 'uploads', 'attendees')
-                os.makedirs(upload_folder, exist_ok=True)
-                attendees_filename = f"attendees_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{attendees_file.filename}"
-                file_path = os.path.join(upload_folder, attendees_filename)
-                attendees_file.save(file_path)
+                # Save the file with error handling
+                try:
+                    upload_folder = os.path.join(app.static_folder or 'static', 'uploads', 'attendees')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    attendees_filename = f"attendees_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{attendees_file.filename}"
+                    file_path = os.path.join(upload_folder, attendees_filename)
+                    attendees_file.save(file_path)
+                except OSError as e:
+                    app.logger.error(f'File save error: {str(e)}')
+                    flash('Error saving attendees file. Please try again.', 'danger')
+                    app_logo = AppSetting.get_setting('app_logo')
+                    return render_template('create_event.html', 
+                                         app_name=app_name, app_logo=app_logo, theme_color=theme_color,
+                                         categories=categories, event_types=event_types, 
+                                         governorates=egyptian_governorates, edit_mode=False)
 
                 # Process and validate the attendees file
                 try:
@@ -1361,8 +1374,8 @@ def export_events():
         output.seek(0)
         output.truncate(0)
         
-        # Process events in batches to avoid memory issues
-        batch_size = 100
+        # Process events in smaller batches to avoid memory issues
+        batch_size = 50  # Reduced batch size
         offset = 0
         total_exported = 0
         
@@ -1849,6 +1862,7 @@ def api_requester_data():
 
 
 @app.route('/api/settings/theme', methods=['POST'])
+@login_required
 @limiter.limit("30 per minute")
 def api_update_theme():
     from flask import jsonify, request
@@ -1883,6 +1897,7 @@ def api_update_theme():
         return jsonify({'error': str(e), 'debug': 'Server error occurred'}), 500
 
 @app.route('/api/settings/app', methods=['POST'])
+@login_required
 def api_update_app_settings():
     from flask import jsonify, request
     try:
