@@ -240,7 +240,8 @@ def login():
             flash('Please enter both email and password', 'danger')
             app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
             theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
-            return render_template('login.html', app_name=app_name, theme_color=theme_color)
+            app_logo = AppSetting.get_setting('app_logo')
+            return render_template('login.html', app_name=app_name, theme_color=theme_color, app_logo=app_logo)
 
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
@@ -252,6 +253,7 @@ def login():
 
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
+    app_logo = AppSetting.get_setting('app_logo')
     main_tagline = AppSetting.get_setting('main_tagline')
     main_header = AppSetting.get_setting('main_header')
     app_description = AppSetting.get_setting('app_description')
@@ -262,6 +264,7 @@ def login():
     return render_template('login.html', 
                          app_name=app_name, 
                          theme_color=theme_color,
+                         app_logo=app_logo,
                          main_tagline=main_tagline,
                          main_header=main_header,
                          app_description=app_description,
@@ -388,9 +391,10 @@ def dashboard():
     # EMERGENCY FIX: Force display of actual values
     app.logger.error(f'RENDERING DASHBOARD WITH: total={total_events}, upcoming={upcoming_events}, online={online_events}, offline={offline_events}')
 
+    app_logo = AppSetting.get_setting('app_logo')
     return render_template('dashboard.html', 
                          app_name=app_name,
-                         app_logo=None,
+                         app_logo=app_logo,
                          theme_color=theme_color,
                          total_events=total_events,
                          upcoming_events=upcoming_events,  
