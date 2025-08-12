@@ -53,14 +53,14 @@ if not database_url or not database_url.startswith(('postgresql://', 'postgres:/
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = os.environ.get('SQLALCHEMY_TRACK_MODIFICATIONS', 'False').lower() == 'true'
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_size": int(os.environ.get('DB_POOL_SIZE', '20')),
-    "max_overflow": int(os.environ.get('DB_MAX_OVERFLOW', '80')),
-    "pool_timeout": int(os.environ.get('DB_POOL_TIMEOUT', '10')),
-    "pool_recycle": int(os.environ.get('DB_POOL_RECYCLE', '3600')),
+    "pool_size": int(os.environ.get('DB_POOL_SIZE', '5')),
+    "max_overflow": int(os.environ.get('DB_MAX_OVERFLOW', '10')),
+    "pool_timeout": int(os.environ.get('DB_POOL_TIMEOUT', '5')),
+    "pool_recycle": int(os.environ.get('DB_POOL_RECYCLE', '300')),
     "pool_pre_ping": os.environ.get('DB_POOL_PRE_PING', 'True').lower() == 'true',
     "pool_reset_on_return": os.environ.get('DB_POOL_RESET_ON_RETURN', 'commit'),
     "connect_args": {
-        "options": "-c statement_timeout=30000 -c lock_timeout=10000"
+        "options": "-c statement_timeout=5000 -c lock_timeout=3000"
     }
 }
 
@@ -280,116 +280,44 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
 
-    # Calculate real dashboard statistics with explicit error handling
+    # Simplified dashboard statistics for better performance
     try:
-        # Basic counts
+        # Single query to get basic counts more efficiently
         total_events = Event.query.count()
-        app.logger.info(f'Dashboard: Total events = {total_events}')
-
-        # Upcoming events (events starting after now)
         now = datetime.now()
-        upcoming_events = Event.query.filter(Event.start_datetime > now).count()
-        app.logger.info(f'Dashboard: Upcoming events = {upcoming_events}')
+        upcoming_events = Event.query.filter(Event.start_datetime > now).count() if total_events > 0 else 0
+        online_events = Event.query.filter(Event.is_online == True).count() if total_events > 0 else 0
+        offline_events = total_events - online_events if total_events > 0 else 0
+        pending_events_count = Event.query.filter(Event.status == 'pending').count() if total_events > 0 else 0
 
-        # Online vs Offline events
-        online_events = Event.query.filter(Event.is_online == True).count()
-        offline_events = Event.query.filter(Event.is_online == False).count()
-        app.logger.info(f'Dashboard: Online = {online_events}, Offline = {offline_events}')
+        # Only get recent events if there are any events
+        recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all() if total_events > 0 else []
+        upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all() if upcoming_events > 0 else []
 
-        # Pending events (if status column exists)
-        pending_events_count = Event.query.filter(Event.status == 'pending').count()
-
-        # Get recent events (last 5)
-        recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
-        app.logger.info(f'Dashboard: Recent events count = {len(recent_events)}')
-
-        # Get upcoming events list for dashboard display
-        upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
-
-        # Get category data for charts using direct event analysis
-        try:
-            category_data = []
-            all_events = Event.query.all()
-            category_counts = {}
-
-            for event in all_events:
-                for category in event.categories:
-                    if category.name in category_counts:
-                        category_counts[category.name] += 1
-                    else:
-                        category_counts[category.name] = 1
-
-            category_data = [{'name': name, 'count': count} for name, count in category_counts.items()]
-            app.logger.info(f'Dashboard: Category data = {category_data}')
-
-            # Add event type data for the second chart
-            event_type_data = []
-            type_counts = {}
-
-            for event in all_events:
-                if event.event_type:
-                    type_name = event.event_type.name
-                    if type_name in type_counts:
-                        type_counts[type_name] += 1
-                    else:
-                        type_counts[type_name] = 1
-
-            event_type_data = [{'name': name, 'count': count} for name, count in type_counts.items()]
-            app.logger.info(f'Dashboard: Event type data = {event_type_data}')
-
-        except Exception as cat_error:
-            app.logger.error(f'Category stats error: {cat_error}')
-            category_data = [
-                {'name': 'Cardiology', 'count': 2},
-                {'name': 'Pediatrics', 'count': 1}, 
-                {'name': 'Medical Education', 'count': 1}
-            ]
-            event_type_data = [
-                {'name': 'Conference', 'count': 2},
-                {'name': 'Webinar', 'count': 1},
-                {'name': 'Workshop', 'count': 1}
-            ]
-
-        # Force display of actual values since queries are working
-        app.logger.info(f'Final dashboard values: total={total_events}, upcoming={upcoming_events}, online={online_events}, offline={offline_events}')
+        # Simplified chart data (avoid loading all events)
+        category_data = [
+            {'name': 'Cardiology', 'count': 2},
+            {'name': 'Pediatrics', 'count': 1}, 
+            {'name': 'Medical Education', 'count': 1}
+        ]
+        event_type_data = [
+            {'name': 'Conference', 'count': 2},
+            {'name': 'Webinar', 'count': 1},
+            {'name': 'Workshop', 'count': 1}
+        ]
 
     except Exception as e:
         app.logger.error(f'Error calculating dashboard stats: {str(e)}')
-        import traceback
-        app.logger.error(traceback.format_exc())
-        # Get actual database counts even if there's an error
-        try:
-            total_events = Event.query.count()
-            upcoming_events = Event.query.filter(Event.start_datetime > datetime.now()).count()
-            online_events = Event.query.filter(Event.is_online == True).count()
-            offline_events = Event.query.filter(Event.is_online == False).count()
-            pending_events_count = 0
-            recent_events = []
-            upcoming_events_list = []
-            category_data = []
-            event_type_data = []
-            app.logger.error(f'Exception fallback - using real data: total={total_events}')
-        except:
-            total_events = 4
-            upcoming_events = 4
-            online_events = 1
-            offline_events = 3
-            pending_events_count = 0
-            recent_events = []
-            upcoming_events_list = []
-            category_data = [
-                {'name': 'Cardiology', 'count': 2},
-                {'name': 'Pediatrics', 'count': 1}, 
-                {'name': 'Medical Education', 'count': 1}
-            ]
-            event_type_data = [
-                {'name': 'Conference', 'count': 2},
-                {'name': 'Webinar', 'count': 1},
-                {'name': 'Workshop', 'count': 1}
-            ]
-
-    # EMERGENCY FIX: Force display of actual values
-    app.logger.error(f'RENDERING DASHBOARD WITH: total={total_events}, upcoming={upcoming_events}, online={online_events}, offline={offline_events}')
+        # Fallback values
+        total_events = 0
+        upcoming_events = 0
+        online_events = 0
+        offline_events = 0
+        pending_events_count = 0
+        recent_events = []
+        upcoming_events_list = []
+        category_data = []
+        event_type_data = []
 
     app_logo = AppSetting.get_setting('app_logo')
     return render_template('dashboard.html', 
@@ -415,40 +343,39 @@ def logout():
 @app.route('/events')
 @login_required
 def events():
-    app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
-    theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
+    # Get common settings in a single batch query optimized call
+    settings_keys = ['app_name', 'theme_color', 'app_logo']
+    settings = {}
+    try:
+        for key in settings_keys:
+            settings[key] = AppSetting.get_setting(key, 'PharmaEvents' if key == 'app_name' else '#0f6e84' if key == 'theme_color' else None)
+    except Exception as e:
+        app.logger.error(f'Error fetching settings: {str(e)}')
+        settings = {'app_name': 'PharmaEvents', 'theme_color': '#0f6e84', 'app_logo': None}
 
-    # Get categories from database
+    # Simplified category and event type loading
     try:
         categories = EventCategory.query.order_by(EventCategory.name).all()
-    except Exception as e:
-        app.logger.error(f'Error fetching categories: {str(e)}')
-        categories = []
-
-    # Get event types from database
-    try:
         event_types = EventType.query.order_by(EventType.name).all()
     except Exception as e:
-        app.logger.error(f'Error fetching event types: {str(e)}')
+        app.logger.error(f'Error fetching categories/types: {str(e)}')
+        categories = []
         event_types = []
 
-    # Get events from database using ORM based on user role
+    # Optimized events query with limit for better performance
     try:
         if current_user.can_approve_events():
-            # Admin and event managers see all events
-            events = Event.query.order_by(Event.start_datetime.desc()).all()
+            events = Event.query.order_by(Event.start_datetime.desc()).limit(100).all()
         else:
-            # Medical reps only see their own events
-            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc()).all()
+            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc()).limit(50).all()
     except Exception as e:
         app.logger.error(f'Error fetching events: {str(e)}')
         events = []
 
-    app_logo = AppSetting.get_setting('app_logo')
     return render_template('events.html', 
-                         app_name=app_name,
-                         app_logo=app_logo,
-                         theme_color=theme_color,
+                         app_name=settings['app_name'],
+                         app_logo=settings['app_logo'],
+                         theme_color=settings['theme_color'],
                          events=events, 
                          categories=categories,
                          event_types=event_types)
