@@ -281,4 +281,116 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // API Token Management
+    const createTokenForm = document.getElementById('create_token_form');
+    if (createTokenForm) {
+        createTokenForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const tokenName = document.getElementById('token_name').value.trim();
+            
+            if (!tokenName) {
+                showAlert('Please enter a token name', 'warning');
+                return;
+            }
+            
+            fetch('/api/tokens', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ name: tokenName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('new_token_value').value = data.token;
+                    const modal = new bootstrap.Modal(document.getElementById('tokenModal'));
+                    modal.show();
+                    document.getElementById('token_name').value = '';
+                    loadTokens();
+                } else {
+                    showAlert(data.error || 'Error creating token', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error creating token', 'danger');
+            });
+        });
+    }
+
+    // Load tokens function
+    function loadTokens() {
+        fetch('/api/tokens', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const tokensList = document.getElementById('tokens_list');
+            if (data.tokens && data.tokens.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Name</th><th>Created</th><th>Last Used</th><th>Actions</th></tr></thead><tbody>';
+                
+                data.tokens.forEach(token => {
+                    const createdDate = new Date(token.created_at).toLocaleDateString();
+                    const lastUsed = token.last_used ? new Date(token.last_used).toLocaleDateString() : 'Never';
+                    
+                    html += `<tr>
+                        <td>${token.name}</td>
+                        <td>${createdDate}</td>
+                        <td>${lastUsed}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteToken(${token.id}, '${token.name}')">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                tokensList.innerHTML = html;
+            } else {
+                tokensList.innerHTML = '<p class="text-muted">No active tokens found.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tokens:', error);
+            document.getElementById('tokens_list').innerHTML = '<p class="text-danger">Error loading tokens</p>';
+        });
+    }
+
+    // Load tokens on page load
+    loadTokens();
+
+    // Copy token function
+    window.copyToken = function() {
+        const tokenInput = document.getElementById('new_token_value');
+        tokenInput.select();
+        document.execCommand('copy');
+        showAlert('Token copied to clipboard!', 'success');
+    };
+
+    // Delete token function
+    window.deleteToken = function(tokenId, tokenName) {
+        if (confirm(`Are you sure you want to delete the token "${tokenName}"? This action cannot be undone.`)) {
+            fetch(`/api/tokens/${tokenId}`, {
+                method: 'DELETE',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Token deleted successfully!', 'success');
+                    loadTokens();
+                } else {
+                    showAlert(data.error || 'Error deleting token', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error deleting token', 'danger');
+            });
+        }
+    };
 });

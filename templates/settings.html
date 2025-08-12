@@ -7,22 +7,22 @@
     .settings-section {
         margin-bottom: 2.5rem;
     }
-    
+
     .settings-header {
         margin-bottom: 1.5rem;
         padding-bottom: 0.5rem;
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     }
-    
+
     .settings-header .icon {
         color: #0f6e84;
         margin-right: 0.5rem;
     }
-    
+
     .settings-card {
         height: 100%;
     }
-    
+
     .table-hover tbody tr:hover {
         background-color: rgba(15, 110, 132, 0.05);
     }
@@ -46,13 +46,13 @@
         <i class="fas fa-palette fa-lg icon"></i>
         <h3 class="mb-0">Theme Colors</h3>
     </div>
-    
+
     <div class="card">
         <div class="card-body">
             <div class="row">
                 <div class="col-md-8">
                     <label class="form-label">Primary Theme Color</label>
-                    
+
                     <!-- Color Wheel Picker -->
                     <div class="mb-3">
                         <label for="color_picker" class="form-label">Custom Color Picker</label>
@@ -63,7 +63,7 @@
                         </div>
                         <small class="text-muted">Pick any color from the color wheel</small>
                     </div>
-                    
+
                     <!-- Quick Preset Colors -->
                     <div class="mb-3">
                         <label class="form-label">Quick Presets</label>
@@ -89,7 +89,7 @@
                                     Cyan
                                 </button>
                             </div>
-                            
+
                             <!-- Greens -->
                             <div class="col-auto">
                                 <button type="button" class="btn btn-outline-secondary preset-color" data-color="#198754" style="background-color: #198754; color: white;">
@@ -111,7 +111,7 @@
                                     Material Green
                                 </button>
                             </div>
-                            
+
                             <!-- Purples -->
                             <div class="col-auto">
                                 <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6f42c1" style="background-color: #6f42c1; color: white;">
@@ -133,7 +133,7 @@
                                     Indigo
                                 </button>
                             </div>
-                            
+
                             <!-- Reds & Pinks -->
                             <div class="col-auto">
                                 <button type="button" class="btn btn-outline-secondary preset-color" data-color="#dc3545" style="background-color: #dc3545; color: white;">
@@ -155,7 +155,7 @@
                                     Deep Pink
                                 </button>
                             </div>
-                            
+
                             <!-- Oranges & Yellows -->
                             <div class="col-auto">
                                 <button type="button" class="btn btn-outline-secondary preset-color" data-color="#fd7e14" style="background-color: #fd7e14; color: white;">
@@ -177,7 +177,7 @@
                                     Deep Orange
                                 </button>
                             </div>
-                            
+
                             <!-- Neutrals & Darks -->
                             <div class="col-auto">
                                 <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6c757d" style="background-color: #6c757d; color: white;">
@@ -202,7 +202,7 @@
                         </div>
                         <small class="text-muted">Click any preset to quickly apply</small>
                     </div>
-                    
+
                     <!-- Current Color Display -->
                     <div class="current-theme-display p-3 border rounded" style="background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}; color: white;">
                         <strong>Current Theme Color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}</strong>
@@ -219,7 +219,7 @@
         <i class="fas fa-info-circle fa-lg icon"></i>
         <h3 class="mb-0">Application Details</h3>
     </div>
-    
+
     <div class="card">
         <div class="card-body">
             <div class="row">
@@ -232,11 +232,11 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="app_logo" class="form-label">Application Logo</label>
-                        
+
                         <!-- Current Logo Display -->
                         {% if app_logo %}
                         <div class="mb-2">
@@ -245,7 +245,7 @@
                                  style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
                         </div>
                         {% endif %}
-                        
+
                         <div class="input-group">
                             <input type="file" class="form-control" id="app_logo" accept="image/png,image/jpeg,image/jpg,image/svg+xml">
                             <button class="btn btn-primary" type="button" id="upload_logo">Upload Logo</button>
@@ -264,7 +264,7 @@
         <i class="fas fa-sign-in-alt fa-lg icon"></i>
         <h3 class="mb-0">Login Page Content</h3>
     </div>
-    
+
     <div class="card">
         <div class="card-body">
             <div class="row">
@@ -281,7 +281,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-12">
                     <div class="mb-3">
@@ -290,7 +290,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
@@ -302,7 +302,7 @@
                         <textarea class="form-control" id="feature1_description" rows="3" placeholder="Feature description">{{ feature1_description or 'Built-in tools for Sunshine Act reporting, HCP payment tracking, and compliance checks.' }}</textarea>
                     </div>
                 </div>
-                
+
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="feature2_title" class="form-label">Feature 2 Title</label>
@@ -314,7 +314,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-12">
                     <button type="button" class="btn btn-primary" id="update_login_content">
@@ -332,7 +332,7 @@
         <i class="fas fa-tags fa-lg icon"></i>
         <h3 class="mb-0">Event Categories</h3>
     </div>
-    
+
     <div class="row">
         <div class="col-md-8">
             <div class="card settings-card">
@@ -365,7 +365,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card settings-card">
                 <div class="card-header bg-light">
@@ -393,7 +393,7 @@
         <i class="fas fa-project-diagram fa-lg icon"></i>
         <h3 class="mb-0">Event Types</h3>
     </div>
-    
+
     <div class="row">
         <div class="col-md-8">
             <div class="card settings-card">
@@ -426,7 +426,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card settings-card">
                 <div class="card-header bg-light">
@@ -454,7 +454,7 @@
         <i class="fas fa-users-cog fa-lg icon"></i>
         <h3 class="mb-0">User Management</h3>
     </div>
-    
+
     <div class="row">
         <div class="col-md-8">
             <div class="card settings-card">
@@ -497,7 +497,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card settings-card">
                 <div class="card-header bg-light">

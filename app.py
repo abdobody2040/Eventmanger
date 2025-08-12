@@ -6,14 +6,21 @@ PharmaEvents - Minimal Flask Application
 import os
 import io
 import csv
-from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify
+import secrets
+import hashlib
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_caching import Cache
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pandas as pd
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Load environment variables from .env file
 try:
@@ -76,6 +83,26 @@ cache = Cache(app, config={
     'CACHE_TYPE': 'simple',  # Use simple in-memory cache for development
     'CACHE_DEFAULT_TIMEOUT': int(os.environ.get('CACHE_TIMEOUT', '300'))  # 5 minutes default
 })
+
+# Initialize rate limiter
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    headers_enabled=True
+)
+
+# Configure security logging
+security_logger = logging.getLogger('security')
+security_logger.setLevel(logging.INFO)
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+security_handler = RotatingFileHandler('logs/security.log', maxBytes=10240000, backupCount=10)
+security_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+security_logger.addHandler(security_handler)
 
 # Initialize login manager
 login_manager = LoginManager(app)
@@ -141,6 +168,105 @@ class AppSetting(db.Model):
             db.session.rollback()
             app.logger.error(f'Error setting {key}: {str(e)}')
             return None
+
+# API Token model for API authentication
+class APIToken(db.Model):
+    __tablename__ = 'api_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(256), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    user = db.relationship('User', backref='api_tokens')
+    
+    @classmethod
+    def generate_token(cls, user_id, name):
+        """Generate a new API token"""
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        api_token = cls(
+            token_hash=token_hash,
+            user_id=user_id,
+            name=name
+        )
+        db.session.add(api_token)
+        db.session.commit()
+        return token, api_token
+    
+    @classmethod
+    def verify_token(cls, token):
+        """Verify an API token and return the associated user"""
+        if not token:
+            return None
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        api_token = cls.query.filter_by(token_hash=token_hash, is_active=True).first()
+        if api_token:
+            api_token.last_used = datetime.utcnow()
+            db.session.commit()
+            return api_token.user
+        return None
+
+# Security helper functions
+def log_security_event(event_type, message, user_id=None, ip_address=None):
+    """Log security events"""
+    try:
+        if not ip_address:
+            ip_address = get_remote_address()
+        
+        user_info = f"User ID: {user_id}" if user_id else "Anonymous"
+        security_logger.info(f"{event_type} - {message} - {user_info} - IP: {ip_address}")
+    except Exception as e:
+        app.logger.error(f"Error logging security event: {str(e)}")
+
+def api_token_required(f):
+    """Decorator for API endpoints requiring token authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token:
+            token = request.args.get('api_token')
+        
+        user = APIToken.verify_token(token)
+        if not user:
+            log_security_event("API_AUTH_FAILED", "Invalid or missing API token")
+            return jsonify({'error': 'Invalid or missing API token'}), 401
+        
+        # Set current user for the request
+        login_user(user)
+        return f(*args, **kwargs)
+    return decorated_function
+
+def validate_file_size(file, max_size_mb=16):
+    """Validate file size"""
+    if file:
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        max_size_bytes = max_size_mb * 1024 * 1024
+        if file_size > max_size_bytes:
+            return False, f"File size exceeds {max_size_mb}MB limit"
+    return True, "OK"
+
+def validate_request_size():
+    """Validate request content length"""
+    max_size = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)  # 16MB default
+    if request.content_length and request.content_length > max_size:
+        log_security_event("LARGE_REQUEST", f"Request size {request.content_length} exceeds limit {max_size}")
+        abort(413)  # Request Entity Too Large
+
+# Request size validation middleware
+@app.before_request
+def check_request_size():
+    """Check request size before processing"""
+    if request.content_length:
+        max_size = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)
+        if request.content_length > max_size:
+            log_security_event("LARGE_REQUEST_BLOCKED", f"Request size {request.content_length} exceeds limit")
+            abort(413)
 
 # Event Category model
 class EventCategory(db.Model):
@@ -229,18 +355,30 @@ def recover_db_session():
         pass
 
 # Utility functions for performance optimization
-def get_paginated_events(page=1, per_page=20, user_filter=None, order_by='created_at', desc=True):
+def get_paginated_events(page=1, per_page=20, user_filter=None, order_by='created_at', desc=True, status_filter=None, search_query=None):
     """
-    Get paginated events with optimized query.
+    Get paginated events with optimized query and filtering.
     Returns tuple: (events, total_count, has_next, has_prev)
     """
-    query = Event.query
+    # Use optimized query with joinedload for related data
+    query = Event.query.options(
+        db.joinedload(Event.event_type),
+        db.joinedload(Event.creator),
+        db.joinedload(Event.categories)
+    )
     
-    # Apply user filter if provided
+    # Apply filters
     if user_filter:
         query = query.filter(Event.user_id == user_filter)
     
-    # Apply ordering
+    if status_filter and status_filter != 'all':
+        query = query.filter(Event.status == status_filter)
+    
+    if search_query:
+        # Use indexed search on name field
+        query = query.filter(Event.name.ilike(f'%{search_query}%'))
+    
+    # Apply ordering using indexed columns
     if order_by == 'created_at':
         if desc:
             query = query.order_by(Event.created_at.desc())
@@ -252,8 +390,15 @@ def get_paginated_events(page=1, per_page=20, user_filter=None, order_by='create
         else:
             query = query.order_by(Event.start_datetime.asc())
     
-    # Get total count efficiently
-    total_count = query.count()
+    # Use optimized count query without loading all data
+    from sqlalchemy import func
+    total_count = db.session.query(func.count(Event.id)).filter(*[
+        condition for condition in [
+            Event.user_id == user_filter if user_filter else None,
+            Event.status == status_filter if status_filter and status_filter != 'all' else None,
+            Event.name.ilike(f'%{search_query}%') if search_query else None
+        ] if condition is not None
+    ]).scalar()
     
     # Apply pagination
     offset = (page - 1) * per_page
@@ -394,6 +539,7 @@ def index():
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")  # Stricter rate limiting for login
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -403,6 +549,7 @@ def login():
         password = request.form.get('password')
 
         if not email or not password:
+            log_security_event("LOGIN_ATTEMPT_FAILED", "Missing email or password", ip_address=get_remote_address())
             flash('Please enter both email and password', 'danger')
             app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
             theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
@@ -412,9 +559,11 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user)
+            log_security_event("LOGIN_SUCCESS", f"User {email} logged in successfully", user_id=user.id)
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
         else:
+            log_security_event("LOGIN_FAILED", f"Failed login attempt for email: {email}", ip_address=get_remote_address())
             flash('Invalid email or password', 'danger')
 
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
@@ -602,6 +751,7 @@ def event_details(event_id):
 
 @app.route('/create_event', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("20 per hour")  # Rate limit event creation
 def create_event():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
@@ -644,17 +794,9 @@ def create_event():
             attendees_filename = None
             attendees_count = 0
 
-            # Handle attendees file upload if provided
-            if 'attendees_file' in request.files:
-                attendees_file = request.files['attendees_file']
-                if attendees_file and attendees_file.filename:
-                    # Basic file processing - just count for now
-                    if attendees_file.filename.endswith(('.csv', '.xlsx', '.xls')):
-                        attendees_count = 1  # Placeholder - actual processing would count rows
-                        app.logger.info(f'Attendees file uploaded: {attendees_file.filename}')
-
             # Check if attendees file is provided (required)
             if not attendees_file or not attendees_file.filename:
+                log_security_event("FILE_UPLOAD_FAILED", "Missing attendees file", user_id=current_user.id)
                 flash('Attendees list file is required. Please upload a CSV or Excel file with attendee details.', 'danger')
                 app_logo = AppSetting.get_setting('app_logo')
                 return render_template('create_event.html', 
@@ -663,10 +805,22 @@ def create_event():
                                      governorates=egyptian_governorates, edit_mode=False)
 
             if attendees_file and attendees_file.filename:
+                # Validate file size first
+                size_valid, size_message = validate_file_size(attendees_file, max_size_mb=5)
+                if not size_valid:
+                    log_security_event("FILE_UPLOAD_FAILED", f"Attendees file too large: {size_message}", user_id=current_user.id)
+                    flash(size_message, 'danger')
+                    app_logo = AppSetting.get_setting('app_logo')
+                    return render_template('create_event.html', 
+                                         app_name=app_name, app_logo=app_logo, theme_color=theme_color,
+                                         categories=categories, event_types=event_types, 
+                                         governorates=egyptian_governorates, edit_mode=False)
+
                 # Validate file type (CSV, Excel)
                 allowed_extensions = {'csv', 'xlsx', 'xls'}
                 file_ext = attendees_file.filename.rsplit('.', 1)[1].lower() if '.' in attendees_file.filename else ''
                 if file_ext not in allowed_extensions:
+                    log_security_event("FILE_UPLOAD_FAILED", f"Invalid attendees file type: {file_ext}", user_id=current_user.id)
                     flash('Attendees file must be CSV or Excel format', 'danger')
                     app_logo = AppSetting.get_setting('app_logo')
                     return render_template('create_event.html', 
@@ -1188,6 +1342,7 @@ def delete_event(event_id):
 
 @app.route('/export_events')
 @login_required
+@limiter.limit("5 per hour")  # Limit exports due to resource intensity
 def export_events():
     """Export events to CSV file with optimized streaming"""
     
@@ -1339,6 +1494,7 @@ def download_users_template():
 
 @app.route('/bulk-user-upload', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("3 per hour")  # Very restrictive for bulk operations
 def bulk_user_upload():
     """Handle bulk user creation from Excel file"""
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
@@ -1693,6 +1849,7 @@ def api_requester_data():
 
 
 @app.route('/api/settings/theme', methods=['POST'])
+@limiter.limit("30 per minute")
 def api_update_theme():
     from flask import jsonify, request
     import re
@@ -1979,6 +2136,123 @@ def api_auth_test():
     from flask import jsonify
     return jsonify({'authenticated': True, 'user': current_user.email, 'role': current_user.role})
 
+# API Token Management Endpoints
+@app.route('/api/tokens', methods=['POST'])
+@login_required
+@limiter.limit("5 per hour")  # Limit token creation
+def api_create_token():
+    from flask import jsonify, request
+    try:
+        data = request.get_json()
+        token_name = data.get('name', '').strip()
+        
+        if not token_name:
+            return jsonify({'error': 'Token name is required'}), 400
+        
+        # Check if user already has 5 or more active tokens
+        active_tokens = APIToken.query.filter_by(user_id=current_user.id, is_active=True).count()
+        if active_tokens >= 5:
+            return jsonify({'error': 'Maximum of 5 active tokens allowed per user'}), 400
+        
+        token, api_token = APIToken.generate_token(current_user.id, token_name)
+        log_security_event("API_TOKEN_CREATED", f"Token '{token_name}' created", user_id=current_user.id)
+        
+        return jsonify({
+            'success': True,
+            'token': token,
+            'token_id': api_token.id,
+            'name': api_token.name,
+            'created_at': api_token.created_at.isoformat()
+        })
+        
+    except Exception as e:
+        app.logger.error(f'Error creating API token: {str(e)}')
+        return jsonify({'error': 'Failed to create token'}), 500
+
+@app.route('/api/tokens', methods=['GET'])
+@login_required
+def api_list_tokens():
+    from flask import jsonify
+    try:
+        tokens = APIToken.query.filter_by(user_id=current_user.id, is_active=True).all()
+        tokens_data = [{
+            'id': token.id,
+            'name': token.name,
+            'created_at': token.created_at.isoformat(),
+            'last_used': token.last_used.isoformat() if token.last_used else None
+        } for token in tokens]
+        
+        return jsonify({'tokens': tokens_data})
+        
+    except Exception as e:
+        app.logger.error(f'Error listing API tokens: {str(e)}')
+        return jsonify({'error': 'Failed to list tokens'}), 500
+
+@app.route('/api/tokens/<int:token_id>', methods=['DELETE'])
+@login_required
+def api_delete_token(token_id):
+    from flask import jsonify
+    try:
+        token = APIToken.query.filter_by(id=token_id, user_id=current_user.id).first()
+        if not token:
+            return jsonify({'error': 'Token not found'}), 404
+        
+        token.is_active = False
+        db.session.commit()
+        
+        log_security_event("API_TOKEN_REVOKED", f"Token '{token.name}' revoked", user_id=current_user.id)
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        app.logger.error(f'Error deleting API token: {str(e)}')
+        return jsonify({'error': 'Failed to delete token'}), 500
+
+# Protected API endpoints using token authentication
+@app.route('/api/v1/events', methods=['GET'])
+@api_token_required
+@limiter.limit("100 per hour")
+def api_v1_events():
+    """API endpoint for getting events with token authentication"""
+    from flask import jsonify
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 100)
+        
+        # Use optimized pagination function
+        events, total_count, has_next, has_prev = get_paginated_events(
+            page=page, 
+            per_page=per_page,
+            user_filter=None if current_user.can_approve_events() else current_user.id
+        )
+        
+        events_data = []
+        for event in events:
+            events_data.append({
+                'id': event.id,
+                'name': event.name,
+                'description': event.description,
+                'start_datetime': event.start_datetime.isoformat() if event.start_datetime else None,
+                'end_datetime': event.end_datetime.isoformat() if event.end_datetime else None,
+                'is_online': event.is_online,
+                'status': event.status,
+                'created_at': event.created_at.isoformat() if event.created_at else None
+            })
+        
+        return jsonify({
+            'events': events_data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total_count,
+                'has_next': has_next,
+                'has_prev': has_prev
+            }
+        })
+        
+    except Exception as e:
+        app.logger.error(f'Error in API events endpoint: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route('/forgot_password')
 def forgot_password():
     return '<p>Password reset functionality coming soon. Please contact administrator.</p><p><a href="/login">Back to Login</a></p>'
@@ -2039,4 +2313,8 @@ with app.app_context():
             db.session.add(event_type)
 
     db.session.commit()
+    
+    # Log application startup
+    log_security_event("APPLICATION_START", "Application started successfully")
+    app.logger.info("Database initialization completed with security enhancements")
 
