@@ -53,14 +53,14 @@ if not database_url or not database_url.startswith(('postgresql://', 'postgres:/
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = os.environ.get('SQLALCHEMY_TRACK_MODIFICATIONS', 'False').lower() == 'true'
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_size": int(os.environ.get('DB_POOL_SIZE', '5')),
-    "max_overflow": int(os.environ.get('DB_MAX_OVERFLOW', '10')),
-    "pool_timeout": int(os.environ.get('DB_POOL_TIMEOUT', '5')),
-    "pool_recycle": int(os.environ.get('DB_POOL_RECYCLE', '300')),
+    "pool_size": int(os.environ.get('DB_POOL_SIZE', '20')),
+    "max_overflow": int(os.environ.get('DB_MAX_OVERFLOW', '50')),
+    "pool_timeout": int(os.environ.get('DB_POOL_TIMEOUT', '10')),
+    "pool_recycle": int(os.environ.get('DB_POOL_RECYCLE', '3600')),
     "pool_pre_ping": os.environ.get('DB_POOL_PRE_PING', 'True').lower() == 'true',
     "pool_reset_on_return": os.environ.get('DB_POOL_RESET_ON_RETURN', 'commit'),
     "connect_args": {
-        "options": "-c statement_timeout=5000 -c lock_timeout=3000"
+        "options": "-c statement_timeout=30000 -c lock_timeout=10000"
     }
 }
 
@@ -157,6 +157,15 @@ event_categories = db.Table('event_categories',
 # Event model
 class Event(db.Model):
     __tablename__ = 'event'
+    __table_args__ = (
+        db.Index('idx_event_start_datetime', 'start_datetime'),
+        db.Index('idx_event_user_id', 'user_id'),
+        db.Index('idx_event_status', 'status'),
+        db.Index('idx_event_created_at', 'created_at'),
+        db.Index('idx_event_user_status', 'user_id', 'status'),
+        db.Index('idx_event_start_status', 'start_datetime', 'status'),
+    )
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
@@ -280,19 +289,41 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
 
-    # Simplified dashboard statistics for better performance
+    # Optimized dashboard statistics using efficient database queries
     try:
-        # Single query to get basic counts more efficiently
-        total_events = Event.query.count()
+        from sqlalchemy import func, case
         now = datetime.now()
-        upcoming_events = Event.query.filter(Event.start_datetime > now).count() if total_events > 0 else 0
-        online_events = Event.query.filter(Event.is_online == True).count() if total_events > 0 else 0
-        offline_events = total_events - online_events if total_events > 0 else 0
-        pending_events_count = Event.query.filter(Event.status == 'pending').count() if total_events > 0 else 0
+        
+        # Single query to get all counts efficiently based on user role
+        if current_user.can_approve_events():
+            base_query = db.session.query(
+                func.count(Event.id).label('total_events'),
+                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
+                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
+                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
+            )
+        else:
+            base_query = db.session.query(
+                func.count(Event.id).label('total_events'),
+                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
+                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
+                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
+            ).filter(Event.user_id == current_user.id)
+        
+        stats = base_query.first()
+        total_events = stats.total_events or 0
+        upcoming_events = stats.upcoming_events or 0
+        online_events = stats.online_events or 0
+        offline_events = total_events - online_events
+        pending_events_count = stats.pending_events or 0
 
-        # Only get recent events if there are any events
-        recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all() if total_events > 0 else []
-        upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all() if upcoming_events > 0 else []
+        # Optimized recent and upcoming events queries
+        if current_user.can_approve_events():
+            recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
+            upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
+        else:
+            recent_events = Event.query.filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).limit(5).all()
+            upcoming_events_list = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
 
         # Simplified chart data (avoid loading all events)
         category_data = [
@@ -362,15 +393,39 @@ def events():
         categories = []
         event_types = []
 
-    # Optimized events query with limit for better performance
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)  # Max 100 per page
+    
+    # Search and filter parameters
+    search_query = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', 'all')
+    
+    # Build query with filters
     try:
         if current_user.can_approve_events():
-            events = Event.query.order_by(Event.start_datetime.desc()).limit(100).all()
+            query = Event.query
         else:
-            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.start_datetime.desc()).limit(50).all()
+            query = Event.query.filter_by(user_id=current_user.id)
+        
+        # Apply search filter
+        if search_query:
+            query = query.filter(Event.name.ilike(f'%{search_query}%'))
+        
+        # Apply status filter
+        if status_filter != 'all':
+            query = query.filter_by(status=status_filter)
+        
+        # Paginate results
+        events_pagination = query.order_by(Event.start_datetime.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        events = events_pagination.items
+        
     except Exception as e:
         app.logger.error(f'Error fetching events: {str(e)}')
         events = []
+        events_pagination = None
 
     return render_template('events.html', 
                          app_name=settings['app_name'],
