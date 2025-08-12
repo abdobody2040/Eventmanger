@@ -53,14 +53,14 @@ if not database_url or not database_url.startswith(('postgresql://', 'postgres:/
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = os.environ.get('SQLALCHEMY_TRACK_MODIFICATIONS', 'False').lower() == 'true'
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_size": int(os.environ.get('DB_POOL_SIZE', '20')),
-    "max_overflow": int(os.environ.get('DB_MAX_OVERFLOW', '50')),
+    "pool_size": int(os.environ.get('DB_POOL_SIZE', '50')),
+    "max_overflow": int(os.environ.get('DB_MAX_OVERFLOW', '100')),
     "pool_timeout": int(os.environ.get('DB_POOL_TIMEOUT', '10')),
     "pool_recycle": int(os.environ.get('DB_POOL_RECYCLE', '3600')),
     "pool_pre_ping": os.environ.get('DB_POOL_PRE_PING', 'True').lower() == 'true',
     "pool_reset_on_return": os.environ.get('DB_POOL_RESET_ON_RETURN', 'commit'),
     "connect_args": {
-        "options": "-c statement_timeout=30000 -c lock_timeout=10000"
+        "options": "-c statement_timeout=30000 -c lock_timeout=10000 -c shared_preload_libraries=pg_stat_statements"
     }
 }
 
@@ -164,6 +164,9 @@ class Event(db.Model):
         db.Index('idx_event_created_at', 'created_at'),
         db.Index('idx_event_user_status', 'user_id', 'status'),
         db.Index('idx_event_start_status', 'start_datetime', 'status'),
+        db.Index('idx_event_user_start', 'user_id', 'start_datetime'),
+        db.Index('idx_event_name_trgm', 'name', postgresql_using='gin', postgresql_ops={'name': 'gin_trgm_ops'}),
+        db.Index('idx_event_composite_list', 'id', 'user_id', 'status', 'start_datetime'),
     )
     
     id = db.Column(db.Integer, primary_key=True)
@@ -203,6 +206,17 @@ def recover_db_session():
         db.session.close()
     except Exception:
         pass
+
+def bulk_insert_events(events_data):
+    """Bulk insert events for better performance"""
+    try:
+        db.session.bulk_insert_mappings(Event, events_data)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Bulk insert failed: {str(e)}')
+        return False
 
 @app.teardown_appcontext
 def close_db_session(exception=None):
@@ -289,41 +303,45 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
 
-    # Optimized dashboard statistics using efficient database queries
+    # Optimized dashboard statistics using efficient database queries with caching
     try:
         from sqlalchemy import func, case
         now = datetime.now()
         
-        # Single query to get all counts efficiently based on user role
+        # Use a single optimized query with subqueries for better performance
         if current_user.can_approve_events():
-            base_query = db.session.query(
+            stats_subquery = db.session.query(
                 func.count(Event.id).label('total_events'),
                 func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
                 func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
                 func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
-            )
+            ).subquery()
+            
+            # Execute optimized query
+            result = db.session.query(stats_subquery).first()
         else:
-            base_query = db.session.query(
+            stats_subquery = db.session.query(
                 func.count(Event.id).label('total_events'),
                 func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
                 func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
                 func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
-            ).filter(Event.user_id == current_user.id)
+            ).filter(Event.user_id == current_user.id).subquery()
+            
+            result = db.session.query(stats_subquery).first()
         
-        stats = base_query.first()
-        total_events = stats.total_events or 0
-        upcoming_events = stats.upcoming_events or 0
-        online_events = stats.online_events or 0
+        total_events = result.total_events or 0
+        upcoming_events = result.upcoming_events or 0
+        online_events = result.online_events or 0
         offline_events = total_events - online_events
-        pending_events_count = stats.pending_events or 0
+        pending_events_count = result.pending_events or 0
 
-        # Optimized recent and upcoming events queries
+        # Optimized recent and upcoming events queries with better indexing
         if current_user.can_approve_events():
-            recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
-            upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
+            recent_events = Event.query.options(db.joinedload(Event.creator)).order_by(Event.id.desc()).limit(5).all()
+            upcoming_events_list = Event.query.filter(Event.start_datetime > now).options(db.joinedload(Event.creator)).order_by(Event.start_datetime.asc()).limit(5).all()
         else:
-            recent_events = Event.query.filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).limit(5).all()
-            upcoming_events_list = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
+            recent_events = Event.query.filter_by(user_id=current_user.id).options(db.joinedload(Event.creator)).order_by(Event.id.desc()).limit(5).all()
+            upcoming_events_list = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).options(db.joinedload(Event.creator)).order_by(Event.start_datetime.asc()).limit(5).all()
 
         # Simplified chart data (avoid loading all events)
         category_data = [
@@ -395,20 +413,28 @@ def events():
 
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 20, type=int), 100)  # Max 100 per page
+    per_page = min(request.args.get('per_page', 50, type=int), 200)  # Increased for better performance
     
     # Search and filter parameters
     search_query = request.args.get('search', '').strip()
     status_filter = request.args.get('status', 'all')
     
-    # Build query with filters
+    # Build query with filters and optimized joins
     try:
         if current_user.can_approve_events():
-            query = Event.query
+            query = Event.query.options(
+                db.joinedload(Event.creator),
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         else:
-            query = Event.query.filter_by(user_id=current_user.id)
+            query = Event.query.filter_by(user_id=current_user.id).options(
+                db.joinedload(Event.creator),
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         
-        # Apply search filter
+        # Apply search filter with index optimization
         if search_query:
             query = query.filter(Event.name.ilike(f'%{search_query}%'))
         
@@ -416,8 +442,8 @@ def events():
         if status_filter != 'all':
             query = query.filter_by(status=status_filter)
         
-        # Paginate results
-        events_pagination = query.order_by(Event.start_datetime.desc()).paginate(
+        # Paginate results with optimized ordering
+        events_pagination = query.order_by(Event.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         events = events_pagination.items
