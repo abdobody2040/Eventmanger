@@ -44,6 +44,9 @@ app.secret_key = os.environ.get("SESSION_SECRET")
 app.config['REMEMBER_COOKIE_HTTPONLY'] = os.environ.get('REMEMBER_COOKIE_HTTPONLY', 'True').lower() == 'true'
 app.config['SESSION_COOKIE_HTTPONLY'] = os.environ.get('SESSION_COOKIE_HTTPONLY', 'True').lower() == 'true'
 app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+app.config['WTF_CSRF_TIME_LIMIT'] = int(os.environ.get('CSRF_TIME_LIMIT', '3600'))
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_UPLOAD_SIZE', '16777216'))  # 16MB default
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure database - PostgreSQL only from .env
@@ -1466,18 +1469,27 @@ def bulk_user_upload():
             try:
                 for i in range(0, len(users_to_create), batch_size):
                     batch = users_to_create[i:i + batch_size]
+                    batch_success_count = 0
 
-                    for user_data in batch:
-                        new_user = User()
-                        new_user.email = user_data['email']
-                        new_user.role = user_data['role']
-                        new_user.set_password(user_data['password'])
-                        db.session.add(new_user)
-                        success_count += 1
+                    try:
+                        for user_data in batch:
+                            new_user = User()
+                            new_user.email = user_data['email']
+                            new_user.role = user_data['role']
+                            new_user.set_password(user_data['password'])
+                            db.session.add(new_user)
+                            batch_success_count += 1
 
-                    # Commit each batch
-                    db.session.commit()
-                    app.logger.info(f'Processed batch {i//batch_size + 1}, created {len(batch)} users')
+                        # Commit each batch
+                        db.session.commit()
+                        success_count += batch_success_count
+                        app.logger.info(f'Processed batch {i//batch_size + 1}, created {len(batch)} users')
+                        
+                    except Exception as batch_error:
+                        db.session.rollback()
+                        app.logger.error(f'Error in batch {i//batch_size + 1}: {str(batch_error)}')
+                        errors.append(f'Batch {i//batch_size + 1}: Database error - {str(batch_error)}')
+                        error_count += len(batch)
 
                 # Flash success/error messages
                 if success_count > 0:
@@ -1683,6 +1695,7 @@ def api_requester_data():
 @app.route('/api/settings/theme', methods=['POST'])
 def api_update_theme():
     from flask import jsonify, request
+    import re
     try:
         app.logger.info(f'Theme update request: authenticated={current_user.is_authenticated}')
 
@@ -1697,7 +1710,12 @@ def api_update_theme():
         if not data or 'theme_color' not in data:
             return jsonify({'error': 'Theme color is required'}), 400
 
-        theme_color = data['theme_color']
+        theme_color = data['theme_color'].strip()
+        
+        # Validate hex color format
+        if not re.match(r'^#[0-9A-Fa-f]{6}$', theme_color):
+            return jsonify({'error': 'Invalid color format. Use hex format like #FF0000'}), 400
+            
         # Save to database
         AppSetting.set_setting('theme_color', theme_color)
         app.logger.info(f'Theme color saved: {theme_color}')
@@ -1760,9 +1778,24 @@ def api_update_login_content():
 
 @app.route('/static/uploads/<filename>')
 def uploaded_file(filename):
-    # Simple file serving route for uploaded files
+    # Secure file serving route for uploaded files
     from flask import send_from_directory
-    return send_from_directory('static/uploads', filename)
+    from werkzeug.utils import secure_filename
+    import os
+    
+    # Validate filename to prevent directory traversal
+    secure_name = secure_filename(filename)
+    if secure_name != filename or '..' in filename or filename.startswith('/'):
+        return "Invalid filename", 400
+    
+    # Check if file exists and is in uploads directory
+    upload_path = os.path.join(app.static_folder or 'static', 'uploads')
+    file_path = os.path.join(upload_path, secure_name)
+    
+    if not os.path.exists(file_path) or not os.path.commonpath([upload_path, file_path]) == upload_path:
+        return "File not found", 404
+        
+    return send_from_directory('static/uploads', secure_name)
 
 @app.route('/api/settings/logo', methods=['POST'])
 @login_required
