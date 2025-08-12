@@ -12,7 +12,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
-import pandas as pd
+# import pandas as pd  # Removed for performance - only import when needed
 
 # Load environment variables from .env file
 try:
