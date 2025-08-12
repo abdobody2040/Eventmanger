@@ -39,3 +39,11 @@ flask-sqlalchemy
 gunicorn
 psycopg2-binary
 python-dotenv
+email-validator
+flask
+flask-login
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
+sqlalchemy
+werkzeug
