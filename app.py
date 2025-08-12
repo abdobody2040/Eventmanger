@@ -10,6 +10,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_caching import Cache
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pandas as pd
@@ -66,6 +67,12 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 # Initialize database
 db = SQLAlchemy(app)
+
+# Initialize caching
+cache = Cache(app, config={
+    'CACHE_TYPE': 'simple',  # Use simple in-memory cache for development
+    'CACHE_DEFAULT_TIMEOUT': int(os.environ.get('CACHE_TIMEOUT', '300'))  # 5 minutes default
+})
 
 # Initialize login manager
 login_manager = LoginManager(app)
@@ -158,12 +165,26 @@ event_categories = db.Table('event_categories',
 class Event(db.Model):
     __tablename__ = 'event'
     __table_args__ = (
+        # Basic indexes for common queries
         db.Index('idx_event_start_datetime', 'start_datetime'),
         db.Index('idx_event_user_id', 'user_id'),
         db.Index('idx_event_status', 'status'),
         db.Index('idx_event_created_at', 'created_at'),
+        db.Index('idx_event_is_online', 'is_online'),
+        db.Index('idx_event_type_id', 'event_type_id'),
+        db.Index('idx_event_end_datetime', 'end_datetime'),
+        
+        # Composite indexes for complex queries (order matters!)
         db.Index('idx_event_user_status', 'user_id', 'status'),
+        db.Index('idx_event_user_start', 'user_id', 'start_datetime'),
+        db.Index('idx_event_user_created', 'user_id', 'created_at'),
         db.Index('idx_event_start_status', 'start_datetime', 'status'),
+        db.Index('idx_event_status_start', 'status', 'start_datetime'),
+        db.Index('idx_event_user_online', 'user_id', 'is_online'),
+        db.Index('idx_event_user_end', 'user_id', 'end_datetime'),
+        
+        # Index for export operations
+        db.Index('idx_event_created_desc', 'created_at', postgresql_using='btree'),
     )
     
     id = db.Column(db.Integer, primary_key=True)
@@ -203,6 +224,139 @@ def recover_db_session():
         db.session.close()
     except Exception:
         pass
+
+# Utility functions for performance optimization
+def get_paginated_events(page=1, per_page=20, user_filter=None, order_by='created_at', desc=True):
+    """
+    Get paginated events with optimized query.
+    Returns tuple: (events, total_count, has_next, has_prev)
+    """
+    query = Event.query
+    
+    # Apply user filter if provided
+    if user_filter:
+        query = query.filter(Event.user_id == user_filter)
+    
+    # Apply ordering
+    if order_by == 'created_at':
+        if desc:
+            query = query.order_by(Event.created_at.desc())
+        else:
+            query = query.order_by(Event.created_at.asc())
+    elif order_by == 'start_datetime':
+        if desc:
+            query = query.order_by(Event.start_datetime.desc())
+        else:
+            query = query.order_by(Event.start_datetime.asc())
+    
+    # Get total count efficiently
+    total_count = query.count()
+    
+    # Apply pagination
+    offset = (page - 1) * per_page
+    events = query.offset(offset).limit(per_page).all()
+    
+    # Calculate pagination info
+    has_next = offset + per_page < total_count
+    has_prev = page > 1
+    
+    return events, total_count, has_next, has_prev
+
+@cache.memoize(timeout=300)  # Cache for 5 minutes
+def get_dashboard_stats_cached(user_id, is_admin):
+    """Get cached dashboard statistics"""
+    from sqlalchemy import func, case
+    now = datetime.now()
+    
+    # Single optimized query to get all counts
+    if is_admin:
+        stats = db.session.query(
+            func.count(Event.id).label('total_events'),
+            func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
+            func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
+            func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events'),
+            func.sum(case((Event.end_datetime < now, 1), else_=0)).label('completed_events')
+        ).first()
+    else:
+        stats = db.session.query(
+            func.count(Event.id).label('total_events'),
+            func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
+            func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
+            func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events'),
+            func.sum(case((Event.end_datetime < now, 1), else_=0)).label('completed_events')
+        ).filter(Event.user_id == user_id).first()
+    
+    return {
+        'total_events': stats.total_events or 0,
+        'upcoming_events': stats.upcoming_events or 0,
+        'online_events': stats.online_events or 0,
+        'offline_events': (stats.total_events or 0) - (stats.online_events or 0),
+        'pending_events': stats.pending_events or 0,
+        'completed_events': stats.completed_events or 0
+    }
+
+@cache.memoize(timeout=600)  # Cache for 10 minutes
+def get_category_data_cached(user_id, is_admin):
+    """Get cached category distribution data"""
+    from sqlalchemy import func
+    
+    if is_admin:
+        # Optimized query using database aggregation
+        result = db.session.query(
+            EventCategory.name,
+            func.count(Event.id).label('count')
+        ).join(
+            event_categories, EventCategory.id == event_categories.c.category_id
+        ).join(
+            Event, event_categories.c.event_id == Event.id
+        ).group_by(EventCategory.id, EventCategory.name).all()
+    else:
+        result = db.session.query(
+            EventCategory.name,
+            func.count(Event.id).label('count')
+        ).join(
+            event_categories, EventCategory.id == event_categories.c.category_id
+        ).join(
+            Event, event_categories.c.event_id == Event.id
+        ).filter(Event.user_id == user_id).group_by(EventCategory.id, EventCategory.name).all()
+    
+    categories_data = [{'name': row[0], 'count': row[1]} for row in result if row[1] > 0]
+    categories_data.sort(key=lambda x: x['count'], reverse=True)
+    
+    return categories_data
+
+@cache.memoize(timeout=600)  # Cache for 10 minutes
+def get_monthly_data_cached(user_id, is_admin):
+    """Get cached monthly event distribution"""
+    from sqlalchemy import func, extract
+    current_year = datetime.now().year
+    
+    if is_admin:
+        result = db.session.query(
+            extract('month', Event.start_datetime).label('month'),
+            func.count(Event.id).label('count')
+        ).filter(
+            extract('year', Event.start_datetime) == current_year
+        ).group_by(extract('month', Event.start_datetime)).all()
+    else:
+        result = db.session.query(
+            extract('month', Event.start_datetime).label('month'),
+            func.count(Event.id).label('count')
+        ).filter(
+            Event.user_id == user_id,
+            extract('year', Event.start_datetime) == current_year
+        ).group_by(extract('month', Event.start_datetime)).all()
+    
+    # Initialize all months with 0
+    monthly_counts = [0] * 12
+    for month, count in result:
+        if month:
+            monthly_counts[int(month) - 1] = count
+    
+    return {
+        'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        'data': monthly_counts
+    }
 
 @app.teardown_appcontext
 def close_db_session(exception=None):
@@ -289,35 +443,23 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
 
-    # Optimized dashboard statistics using efficient database queries
+    # Use cached dashboard statistics for better performance
     try:
-        from sqlalchemy import func, case
         now = datetime.now()
         
-        # Single query to get all counts efficiently based on user role
-        if current_user.can_approve_events():
-            base_query = db.session.query(
-                func.count(Event.id).label('total_events'),
-                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
-                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
-                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
-            )
-        else:
-            base_query = db.session.query(
-                func.count(Event.id).label('total_events'),
-                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
-                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
-                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
-            ).filter(Event.user_id == current_user.id)
+        # Get cached stats
+        stats = get_dashboard_stats_cached(
+            user_id=current_user.id,
+            is_admin=current_user.can_approve_events()
+        )
         
-        stats = base_query.first()
-        total_events = stats.total_events or 0
-        upcoming_events = stats.upcoming_events or 0
-        online_events = stats.online_events or 0
-        offline_events = total_events - online_events
-        pending_events_count = stats.pending_events or 0
+        total_events = stats['total_events']
+        upcoming_events = stats['upcoming_events']
+        online_events = stats['online_events']
+        offline_events = stats['offline_events']
+        pending_events_count = stats['pending_events']
 
-        # Optimized recent and upcoming events queries
+        # Optimized recent and upcoming events queries with indexes
         if current_user.can_approve_events():
             recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
             upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
@@ -744,6 +886,9 @@ def create_event():
                     app.logger.error(f'Error associating category: {str(e)}')
 
             db.session.commit()
+            
+            # Invalidate caches after successful event creation
+            invalidate_dashboard_caches()
 
             if current_user.can_approve_events():
                 success_message = f'Event "{title}" created successfully and is now active!'
@@ -926,6 +1071,10 @@ def edit_event(event_id):
                     event.categories.append(category)
 
             db.session.commit()
+            
+            # Invalidate caches after successful event update
+            invalidate_dashboard_caches()
+            
             flash(f'Event "{event.name}" updated successfully!', 'success')
             return redirect(url_for('events'))
 
@@ -973,6 +1122,10 @@ def approve_event(event_id):
         event = Event.query.get_or_404(event_id)
         event.status = 'active'
         db.session.commit()
+        
+        # Invalidate caches after status change
+        invalidate_dashboard_caches()
+        
         flash(f'Event "{event.name}" has been approved.', 'success')
     except Exception as e:
         db.session.rollback()
@@ -993,6 +1146,10 @@ def reject_event(event_id):
         event = Event.query.get_or_404(event_id)
         event.status = 'declined'
         db.session.commit()
+        
+        # Invalidate caches after status change
+        invalidate_dashboard_caches()
+        
         flash(f'Event "{event.name}" has been declined.', 'warning')
     except Exception as e:
         db.session.rollback()
@@ -1014,6 +1171,10 @@ def delete_event(event_id):
         event_name = event.name
         db.session.delete(event)
         db.session.commit()
+        
+        # Invalidate caches after event deletion
+        invalidate_dashboard_caches()
+        
         flash(f'Event "{event_name}" has been deleted successfully.', 'success')
     except Exception as e:
         db.session.rollback()
@@ -1025,63 +1186,95 @@ def delete_event(event_id):
 @app.route('/export_events')
 @login_required
 def export_events():
-    """Export events to CSV file"""
-
-    try:
-        # Get events based on user role
-        if current_user.can_approve_events():
-            # Admin and event managers see all events
-            events = Event.query.order_by(Event.created_at.desc()).all()
-        else:
-            # Medical reps only see their own events
-            events = Event.query.filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).all()
-
-        # Create CSV content
+    """Export events to CSV file with optimized streaming"""
+    
+    def generate_csv():
+        """Generator function for streaming CSV export"""
         output = io.StringIO()
         fieldnames = [
             'ID', 'Event Name', 'Description', 'Event Type', 'Is Online', 
             'Start Date', 'End Date', 'Governorate', 'Categories', 
             'Created By', 'Created At', 'Status'
         ]
-
+        
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
-
-        for event in events:
-            # Format event type
-            event_type = event.event_type.name if event.event_type else 'Not specified'
-
-            # Format categories
-            categories = ', '.join([category.name for category in event.categories]) if event.categories else 'None'
-
-            # Format dates
-            start_date = event.start_datetime.strftime('%Y-%m-%d %H:%M') if event.start_datetime else ''
-            end_date = event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else ''
-            created_at = event.created_at.strftime('%Y-%m-%d %H:%M') if event.created_at else ''
-
-            writer.writerow({
-                'ID': event.id,
-                'Event Name': event.name,
-                'Description': event.description or '',
-                'Event Type': event_type,
-                'Is Online': 'Yes' if event.is_online else 'No',
-                'Start Date': start_date,
-                'End Date': end_date,
-                'Governorate': event.governorate or '',
-                'Categories': categories,
-                'Created By': event.creator.email if event.creator else '',
-                'Created At': created_at,
-                'Status': event.status or 'Active'
-            })
-
-        # Create response
-        response = make_response(output.getvalue())
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        
+        # Process events in batches to avoid memory issues
+        batch_size = 100
+        offset = 0
+        total_exported = 0
+        
+        while True:
+            # Get batch of events with optimized query
+            if current_user.can_approve_events():
+                batch_query = Event.query.options(
+                    db.joinedload(Event.event_type),
+                    db.joinedload(Event.creator),
+                    db.joinedload(Event.categories)
+                ).order_by(Event.created_at.desc()).offset(offset).limit(batch_size)
+            else:
+                batch_query = Event.query.options(
+                    db.joinedload(Event.event_type),
+                    db.joinedload(Event.creator),
+                    db.joinedload(Event.categories)
+                ).filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).offset(offset).limit(batch_size)
+            
+            events_batch = batch_query.all()
+            
+            if not events_batch:
+                break
+                
+            for event in events_batch:
+                # Format event type
+                event_type = event.event_type.name if event.event_type else 'Not specified'
+                
+                # Format categories
+                categories = ', '.join([category.name for category in event.categories]) if event.categories else 'None'
+                
+                # Format dates
+                start_date = event.start_datetime.strftime('%Y-%m-%d %H:%M') if event.start_datetime else ''
+                end_date = event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else ''
+                created_at = event.created_at.strftime('%Y-%m-%d %H:%M') if event.created_at else ''
+                
+                writer.writerow({
+                    'ID': event.id,
+                    'Event Name': event.name,
+                    'Description': event.description or '',
+                    'Event Type': event_type,
+                    'Is Online': 'Yes' if event.is_online else 'No',
+                    'Start Date': start_date,
+                    'End Date': end_date,
+                    'Governorate': event.governorate or '',
+                    'Categories': categories,
+                    'Created By': event.creator.email if event.creator else '',
+                    'Created At': created_at,
+                    'Status': event.status or 'Active'
+                })
+                
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+            
+            total_exported += len(events_batch)
+            offset += batch_size
+            
+            # Log progress for large exports
+            if total_exported % 500 == 0:
+                app.logger.info(f'Export progress: {total_exported} events processed')
+    
+    try:
+        # Create streaming response
+        response = make_response(generate_csv())
         response.headers['Content-Type'] = 'text/csv'
         response.headers['Content-Disposition'] = f'attachment; filename=events_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-
-        app.logger.info(f'Events exported by user {current_user.email}: {len(events)} events')
+        
+        app.logger.info(f'Events export started by user {current_user.email}')
         return response
-
+        
     except Exception as e:
         app.logger.error(f'Error exporting events: {str(e)}')
         flash('Error exporting events. Please try again.', 'danger')
@@ -1314,37 +1507,14 @@ def bulk_user_upload():
 @login_required
 def api_dashboard_stats():
     from flask import jsonify
-    from datetime import datetime
-
+    
     try:
-        # Get event counts based on user role
-        now = datetime.now()
-
-        if current_user.can_approve_events():
-            # Admin and event managers see all events
-            total_events = Event.query.count()
-            upcoming_events = Event.query.filter(Event.start_datetime > now).count()
-            online_events = Event.query.filter(Event.is_online == True).count()
-            offline_events = Event.query.filter(Event.is_online == False).count()
-            pending_events = Event.query.filter(Event.status == 'pending').count()
-            completed_events = Event.query.filter(Event.end_datetime < now).count()
-        else:
-            # Medical reps only see their own events
-            total_events = Event.query.filter_by(user_id=current_user.id).count()
-            upcoming_events = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).count()
-            online_events = Event.query.filter(Event.user_id == current_user.id, Event.is_online == True).count()
-            offline_events = Event.query.filter(Event.user_id == current_user.id, Event.is_online == False).count()
-            pending_events = Event.query.filter(Event.user_id == current_user.id, Event.status == 'pending').count()
-            completed_events = Event.query.filter(Event.user_id == current_user.id, Event.end_datetime < now).count()
-
-        return jsonify({
-            'total_events': total_events,
-            'upcoming_events': upcoming_events,
-            'online_events': online_events,
-            'offline_events': offline_events,
-            'pending_events': pending_events,
-            'completed_events': completed_events
-        })
+        # Use cached stats for better performance
+        stats = get_dashboard_stats_cached(
+            user_id=current_user.id,
+            is_admin=current_user.can_approve_events()
+        )
+        return jsonify(stats)
     except Exception as e:
         app.logger.error(f'Error getting dashboard stats: {str(e)}')
         return jsonify({
@@ -1361,27 +1531,11 @@ def api_dashboard_stats():
 def api_category_data():
     from flask import jsonify
     try:
-        # Get category distribution from database
-        categories_data = []
-        categories = EventCategory.query.all()
-
-        for category in categories:
-            if current_user.can_approve_events():
-                # Admin and event managers see all events
-                event_count = len([event for event in category.events])
-            else:
-                # Medical reps only see their own events
-                event_count = len([event for event in category.events if event.user_id == current_user.id])
-
-            if event_count > 0:  # Only include categories with events
-                categories_data.append({
-                    'name': category.name,
-                    'count': event_count
-                })
-
-        # Sort by count descending
-        categories_data.sort(key=lambda x: x['count'], reverse=True)
-
+        # Use cached category data for better performance
+        categories_data = get_category_data_cached(
+            user_id=current_user.id,
+            is_admin=current_user.can_approve_events()
+        )
         return jsonify(categories_data)
     except Exception as e:
         app.logger.error(f'Error getting category data: {str(e)}')
@@ -1391,45 +1545,14 @@ def api_category_data():
 @login_required  
 def api_monthly_data():
     from flask import jsonify
-    from datetime import datetime
-    import calendar
-
+    
     try:
-        # Get current year for monthly breakdown
-        current_year = datetime.now().year
-
-        # Initialize monthly data
-        monthly_counts = [0] * 12
-
-        # Get events from current year
-        events = Event.query.filter(
-            Event.start_datetime >= datetime(current_year, 1, 1),
-            Event.start_datetime < datetime(current_year + 1, 1, 1)
-        ).all()
-
-        # Get events based on user role
-        if current_user.can_approve_events():
-            events = Event.query.filter(
-                Event.start_datetime >= datetime(current_year, 1, 1),
-                Event.start_datetime < datetime(current_year + 1, 1, 1)
-            ).all()
-        else:
-            events = Event.query.filter(
-                Event.user_id == current_user.id,
-                Event.start_datetime >= datetime(current_year, 1, 1),
-                Event.start_datetime < datetime(current_year + 1, 1, 1)
-            ).all()
-
-        # Count events by month
-        for event in events:
-            if event.start_datetime:
-                month_index = event.start_datetime.month - 1  # 0-based index
-                monthly_counts[month_index] += 1
-
-        return jsonify({
-            'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            'data': monthly_counts
-        })
+        # Use cached monthly data for better performance
+        monthly_data = get_monthly_data_cached(
+            user_id=current_user.id,
+            is_admin=current_user.can_approve_events()
+        )
+        return jsonify(monthly_data)
     except Exception as e:
         app.logger.error(f'Error getting monthly data: {str(e)}')
         return jsonify({
@@ -1437,84 +1560,119 @@ def api_monthly_data():
             'data': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         })
 
+@cache.memoize(timeout=600)  # Cache for 10 minutes
+def get_event_types_data_cached(user_id, is_admin):
+    """Get cached event types distribution"""
+    from sqlalchemy import func
+    
+    if is_admin:
+        result = db.session.query(
+            EventType.name,
+            func.count(Event.id).label('count')
+        ).outerjoin(Event, EventType.id == Event.event_type_id).group_by(
+            EventType.id, EventType.name
+        ).having(func.count(Event.id) > 0).order_by(func.count(Event.id).desc()).all()
+    else:
+        result = db.session.query(
+            EventType.name,
+            func.count(Event.id).label('count')
+        ).outerjoin(Event, EventType.id == Event.event_type_id).filter(
+            Event.user_id == user_id
+        ).group_by(
+            EventType.id, EventType.name
+        ).having(func.count(Event.id) > 0).order_by(func.count(Event.id).desc()).all()
+    
+    event_types_data = [{'name': row[0], 'count': row[1]} for row in result]
+    
+    # If no events, show online vs offline distribution
+    if not event_types_data:
+        if is_admin:
+            online_count = Event.query.filter_by(is_online=True).count()
+            offline_count = Event.query.filter_by(is_online=False).count()
+        else:
+            online_count = Event.query.filter_by(user_id=user_id, is_online=True).count()
+            offline_count = Event.query.filter_by(user_id=user_id, is_online=False).count()
+            
+        if online_count > 0 or offline_count > 0:
+            event_types_data = [
+                {'name': 'Online Events', 'count': online_count},
+                {'name': 'Offline Events', 'count': offline_count}
+            ]
+    
+    return event_types_data
+
 @app.route('/api/dashboard/event-types')
 @login_required
 def api_event_types_data():
     from flask import jsonify
     try:
-        # Get event type distribution using ORM
-        from sqlalchemy import func
-
-        # Get events based on user role for event type data
-        if current_user.can_approve_events():
-            # Admin and event managers see all events
-            result = db.session.query(
-                EventType.name,
-                func.count(Event.id).label('count')
-            ).outerjoin(Event, EventType.id == Event.event_type_id).group_by(
-                EventType.id, EventType.name
-            ).having(func.count(Event.id) > 0).order_by(func.count(Event.id).desc()).all()
-        else:
-            # Medical reps only see their own events
-            result = db.session.query(
-                EventType.name,
-                func.count(Event.id).label('count')
-            ).outerjoin(Event, EventType.id == Event.event_type_id).filter(
-                Event.user_id == current_user.id
-            ).group_by(
-                EventType.id, EventType.name
-            ).having(func.count(Event.id) > 0).order_by(func.count(Event.id).desc()).all()
-
-        event_types_data = [{'name': row[0], 'count': row[1]} for row in result]
-
-        # If no events, show online vs offline distribution
-        if not event_types_data:
-            online_count = Event.query.filter_by(is_online=True).count()
-            offline_count = Event.query.filter_by(is_online=False).count()
-            if online_count > 0 or offline_count > 0:
-                event_types_data = [
-                    {'name': 'Online Events', 'count': online_count},
-                    {'name': 'Offline Events', 'count': offline_count}
-                ]
-
+        # Use cached event types data for better performance
+        event_types_data = get_event_types_data_cached(
+            user_id=current_user.id,
+            is_admin=current_user.can_approve_events()
+        )
         return jsonify(event_types_data)
     except Exception as e:
         app.logger.error(f'Error getting event types data: {str(e)}')
         return jsonify([])
+
+# Cache invalidation helper functions
+def invalidate_dashboard_caches():
+    """Invalidate all dashboard-related caches when data changes"""
+    try:
+        cache.delete_memoized(get_dashboard_stats_cached)
+        cache.delete_memoized(get_category_data_cached)
+        cache.delete_memoized(get_monthly_data_cached)
+        cache.delete_memoized(get_event_types_data_cached)
+        cache.delete_memoized(get_requester_data_cached)
+        app.logger.info('Dashboard caches invalidated')
+    except Exception as e:
+        app.logger.error(f'Error invalidating caches: {str(e)}')
+
+def create_database_indexes():
+    """Create additional database indexes for performance optimization"""
+    try:
+        # The indexes are already defined in the Event model's __table_args__
+        # This function is for future manual index creation if needed
+        app.logger.info('Database indexes are defined in model schema')
+        
+        # Additional indexes can be created here if needed
+        # Example: db.session.execute('CREATE INDEX IF NOT EXISTS idx_custom ON table (column)')
+        
+    except Exception as e:
+        app.logger.error(f'Error creating database indexes: {str(e)}')
+
+@cache.memoize(timeout=600)  # Cache for 10 minutes
+def get_requester_data_cached(user_id, is_admin):
+    """Get cached requester distribution data"""
+    from sqlalchemy import func
+    
+    if is_admin:
+        results = db.session.query(
+            User.email,
+            func.count(Event.id).label('event_count')
+        ).join(Event, User.id == Event.user_id).group_by(User.id, User.email).all()
+    else:
+        results = db.session.query(
+            User.email,
+            func.count(Event.id).label('event_count')
+        ).join(Event, User.id == Event.user_id).filter(User.id == user_id).group_by(User.id, User.email).all()
+    
+    requester_data = [{'name': email, 'count': count} for email, count in results]
+    requester_data.sort(key=lambda x: x['count'], reverse=True)
+    
+    return requester_data
 
 @app.route('/api/dashboard/requesters')
 @login_required
 def api_requester_data():
     from flask import jsonify
     try:
-        # Get events by requester (user who created them)
-        requester_data = []
-
-        # Query events grouped by user based on role
-        from sqlalchemy import func
-
-        if current_user.can_approve_events():
-            # Admin and event managers see all events by all users
-            results = db.session.query(
-                User.email,
-                func.count(Event.id).label('event_count')
-            ).join(Event, User.id == Event.user_id).group_by(User.id, User.email).all()
-        else:
-            # Medical reps only see their own stats
-            results = db.session.query(
-                User.email,
-                func.count(Event.id).label('event_count')
-            ).join(Event, User.id == Event.user_id).filter(User.id == current_user.id).group_by(User.id, User.email).all()
-
-        for email, count in results:
-            requester_data.append({
-                'name': email,
-                'count': count
-            })
-
-        # Sort by count descending
-        requester_data.sort(key=lambda x: x['count'], reverse=True)
-
+        # Use cached requester data for better performance
+        requester_data = get_requester_data_cached(
+            user_id=current_user.id,
+            is_admin=current_user.can_approve_events()
+        )
         return jsonify(requester_data)
     except Exception as e:
         app.logger.error(f'Error getting requester data: {str(e)}')
