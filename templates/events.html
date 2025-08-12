@@ -260,6 +260,69 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Pagination Controls -->
+{% if pagination and pagination.pages > 1 %}
+<div class="card-footer">
+    <nav aria-label="Events pagination">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            <!-- Previous Page -->
+            {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('events', page=pagination.prev_num, search=search_query, status=status_filter, category=category_filter) }}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+
+            <!-- Page Numbers -->
+            {% for page_num in range(1, pagination.pages + 1) %}
+                {% if page_num == pagination.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% elif page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('events', page=page_num, search=search_query, status=status_filter, category=category_filter) }}">{{ page_num }}</a>
+                    </li>
+                {% elif page_num == 4 and pagination.page > 5 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% elif page_num == pagination.pages - 3 and pagination.page < pagination.pages - 4 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next Page -->
+            {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('events', page=pagination.next_num, search=search_query, status=status_filter, category=category_filter) }}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <!-- Results Info -->
+    <div class="text-center mt-2">
+        <small class="text-muted">
+            Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page <= pagination.total else pagination.total }} of {{ pagination.total }} events
+        </small>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

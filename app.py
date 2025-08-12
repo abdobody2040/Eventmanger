@@ -97,6 +97,75 @@ class User(UserMixin, db.Model):
         return self.role == 'medical_rep'
 
     def can_approve_events(self):
+
+from functools import lru_cache
+from datetime import datetime, timedelta
+
+# Simple in-memory cache for dashboard stats (5-minute TTL)
+dashboard_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+def get_cached_dashboard_stats(user_id, is_admin):
+    """Get cached dashboard statistics with TTL"""
+    cache_key = f"dashboard_{user_id}_{is_admin}"
+    now = datetime.now()
+    
+    # Check if we have cached data that's still valid
+    if cache_key in dashboard_cache:
+        cached_data, timestamp = dashboard_cache[cache_key]
+        if (now - timestamp).seconds < CACHE_TTL:
+            return cached_data
+    
+    # Cache miss or expired - calculate fresh stats
+    try:
+        from sqlalchemy import func, case
+        
+        if is_admin:
+            base_query = db.session.query(
+                func.count(Event.id).label('total_events'),
+                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
+                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
+                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
+            )
+        else:
+            base_query = db.session.query(
+                func.count(Event.id).label('total_events'),
+                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
+                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
+                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
+            ).filter(Event.user_id == user_id)
+        
+        stats = base_query.first()
+        result = {
+            'total_events': stats.total_events or 0,
+            'upcoming_events': stats.upcoming_events or 0,
+            'online_events': stats.online_events or 0,
+            'offline_events': (stats.total_events or 0) - (stats.online_events or 0),
+            'pending_events': stats.pending_events or 0
+        }
+        
+        # Cache the result
+        dashboard_cache[cache_key] = (result, now)
+        
+        # Clean old cache entries (simple cleanup)
+        if len(dashboard_cache) > 100:
+            old_keys = [k for k, (_, ts) in dashboard_cache.items() if (now - ts).seconds > CACHE_TTL]
+            for k in old_keys[:50]:  # Remove oldest 50 entries
+                dashboard_cache.pop(k, None)
+        
+        return result
+        
+    except Exception as e:
+        app.logger.error(f'Error calculating cached dashboard stats: {str(e)}')
+        return {
+            'total_events': 0,
+            'upcoming_events': 0,
+            'online_events': 0,
+            'offline_events': 0,
+            'pending_events': 0
+        }
+
+
         return self.role in ['admin', 'event_manager']
 
 # App Settings model for persistent configuration
@@ -289,33 +358,14 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
 
-    # Optimized dashboard statistics using efficient database queries
+    # Use cached dashboard statistics for better performance
     try:
-        from sqlalchemy import func, case
-        now = datetime.now()
-        
-        # Single query to get all counts efficiently based on user role
-        if current_user.can_approve_events():
-            base_query = db.session.query(
-                func.count(Event.id).label('total_events'),
-                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
-                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
-                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
-            )
-        else:
-            base_query = db.session.query(
-                func.count(Event.id).label('total_events'),
-                func.sum(case((Event.start_datetime > now, 1), else_=0)).label('upcoming_events'),
-                func.sum(case((Event.is_online == True, 1), else_=0)).label('online_events'),
-                func.sum(case((Event.status == 'pending', 1), else_=0)).label('pending_events')
-            ).filter(Event.user_id == current_user.id)
-        
-        stats = base_query.first()
-        total_events = stats.total_events or 0
-        upcoming_events = stats.upcoming_events or 0
-        online_events = stats.online_events or 0
-        offline_events = total_events - online_events
-        pending_events_count = stats.pending_events or 0
+        stats = get_cached_dashboard_stats(current_user.id, current_user.can_approve_events())
+        total_events = stats['total_events']
+        upcoming_events = stats['upcoming_events']
+        online_events = stats['online_events']
+        offline_events = stats['offline_events']
+        pending_events_count = stats['pending_events']
 
         # Optimized recent and upcoming events queries
         if current_user.can_approve_events():
@@ -395,18 +445,27 @@ def events():
 
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 20, type=int), 100)  # Max 100 per page
+    per_page = min(request.args.get('per_page', 10, type=int), 50)  # Reduced default and max per page
     
     # Search and filter parameters
     search_query = request.args.get('search', '').strip()
     status_filter = request.args.get('status', 'all')
+    category_filter = request.args.get('category', 'all')
     
-    # Build query with filters
+    # Build query with filters and eager loading
     try:
         if current_user.can_approve_events():
-            query = Event.query
+            query = Event.query.options(
+                db.joinedload(Event.creator),
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         else:
-            query = Event.query.filter_by(user_id=current_user.id)
+            query = Event.query.filter_by(user_id=current_user.id).options(
+                db.joinedload(Event.creator),
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         
         # Apply search filter
         if search_query:
@@ -416,24 +475,43 @@ def events():
         if status_filter != 'all':
             query = query.filter_by(status=status_filter)
         
-        # Paginate results
+        # Apply category filter
+        if category_filter != 'all':
+            query = query.join(Event.categories).filter(EventCategory.name == category_filter)
+        
+        # Paginate results with optimized ordering
         events_pagination = query.order_by(Event.start_datetime.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
-        events = events_pagination.items
+        
+        # Get pagination info
+        pagination_info = {
+            'page': events_pagination.page,
+            'pages': events_pagination.pages,
+            'per_page': events_pagination.per_page,
+            'total': events_pagination.total,
+            'has_next': events_pagination.has_next,
+            'has_prev': events_pagination.has_prev,
+            'next_num': events_pagination.next_num,
+            'prev_num': events_pagination.prev_num
+        }
         
     except Exception as e:
         app.logger.error(f'Error fetching events: {str(e)}')
-        events = []
         events_pagination = None
+        pagination_info = {}
 
     return render_template('events.html', 
                          app_name=settings['app_name'],
                          app_logo=settings['app_logo'],
                          theme_color=settings['theme_color'],
-                         events=events, 
+                         events=events_pagination.items if events_pagination else [], 
+                         pagination=pagination_info,
                          categories=categories,
-                         event_types=event_types)
+                         event_types=event_types,
+                         search_query=search_query,
+                         status_filter=status_filter,
+                         category_filter=category_filter)
 
 @app.route('/event_details/<int:event_id>')
 @login_required
