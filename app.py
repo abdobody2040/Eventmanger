@@ -2021,6 +2021,35 @@ def api_upload_logo():
         app.logger.error(f'Error uploading logo: {str(e)}')
         return jsonify({'error': f'Failed to upload logo: {str(e)}'}), 500
 
+@app.route('/api/settings/logo', methods=['DELETE'])
+@login_required
+def api_remove_logo():
+    from flask import jsonify
+    try:
+        # Get current logo to remove the file
+        current_logo = AppSetting.get_setting('app_logo')
+        
+        # Remove logo setting from database
+        AppSetting.set_setting('app_logo', None)
+        
+        # Try to remove the physical file if it exists
+        if current_logo and current_logo.startswith('/static/uploads/'):
+            try:
+                file_path = os.path.join(app.static_folder or 'static', 'uploads', 
+                                       current_logo.split('/')[-1])
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    app.logger.info(f'Removed logo file: {file_path}')
+            except Exception as file_error:
+                app.logger.warning(f'Could not remove logo file: {str(file_error)}')
+        
+        app.logger.info('Logo removed successfully')
+        return jsonify({'success': True, 'message': 'Logo removed successfully!'})
+        
+    except Exception as e:
+        app.logger.error(f'Error removing logo: {str(e)}')
+        return jsonify({'error': f'Failed to remove logo: {str(e)}'}), 500
+
 @app.route('/api/categories', methods=['POST'])
 @login_required
 def api_add_category():

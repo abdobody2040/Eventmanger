@@ -151,6 +151,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Logo removal
+    const removeLogoBtn = document.getElementById('remove_logo');
+    if (removeLogoBtn) {
+        removeLogoBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to remove the current logo? This action cannot be undone.')) {
+                fetch('/api/settings/logo', {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Logo removed successfully! Refreshing page...', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showAlert(data.error || 'Error removing logo', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error removing logo', 'danger');
+                });
+            }
+        });
+    }
+
     // Login content update
     const updateLoginContentBtn = document.getElementById('update_login_content');
     if (updateLoginContentBtn) {
@@ -323,11 +349,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load tokens function
     function loadTokens() {
+        // Only load tokens if the tokens list element exists
+        const tokensList = document.getElementById('tokens_list');
+        if (!tokensList) {
+            return; // Exit early if tokens section doesn't exist
+        }
+        
         fetch('/api/tokens', {
             method: 'GET',
             credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const tokensList = document.getElementById('tokens_list');
             if (data.tokens && data.tokens.length > 0) {
@@ -356,12 +393,18 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error loading tokens:', error);
-            document.getElementById('tokens_list').innerHTML = '<p class="text-danger">Error loading tokens</p>';
+            // Only show user-facing error if this was an intentional load
+            const tokensList = document.getElementById('tokens_list');
+            if (tokensList) {
+                tokensList.innerHTML = '<div class="text-muted">API tokens not available</div>';
+            }
         });
     }
 
-    // Load tokens on page load
-    loadTokens();
+    // Load tokens on page load only if the tokens section exists
+    if (document.getElementById('tokens_list')) {
+        loadTokens();
+    }
 
     // Copy token function
     window.copyToken = function() {

@@ -78,6 +78,8 @@ Configuration: Environment variables only - no hardcoded values in source code.
 - ✅ **UI Improvements**: Added readonly fields with helpful tooltips for auto-calculated registration deadlines
 - ✅ **Backend Validation**: Updated server-side validation to enforce new required fields
 - ✅ **JavaScript Enhancement**: Added automatic date calculation functionality with real-time updates
+- ✅ **Logo Management**: Added remove logo functionality in application settings with confirmation dialog
+- ✅ **API Enhancement**: Implemented DELETE endpoint for logo removal with file cleanup
 
 ### August 12, 2025 - Performance Optimization and Database Improvements
 - ✅ **Database Optimization**: Added comprehensive database indexes for Event model including composite indexes for complex queries

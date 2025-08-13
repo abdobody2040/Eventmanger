@@ -239,10 +239,15 @@
 
                         <!-- Current Logo Display -->
                         {% if app_logo %}
-                        <div class="mb-2">
+                        <div class="mb-2" id="current_logo_section">
                             <small class="text-muted d-block">Current Logo:</small>
-                            <img src="{{ app_logo }}" alt="Current Logo" 
-                                 style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{ app_logo }}" alt="Current Logo" 
+                                     style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+                                <button class="btn btn-sm btn-outline-danger" type="button" id="remove_logo" title="Remove current logo">
+                                    <i class="fas fa-trash-alt"></i> Remove
+                                </button>
+                            </div>
                         </div>
                         {% endif %}
 
