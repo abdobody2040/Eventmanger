@@ -69,6 +69,16 @@ Configuration: Environment variables only - no hardcoded values in source code.
 
 ## Recent Changes
 
+### August 13, 2025 - Replit Agent Migration and Form Enhancements
+- ✅ **Migration Completed**: Successfully migrated PharmaEvents from Replit Agent to standard Replit environment
+- ✅ **Dependencies Installed**: Added all required Flask extensions (flask-wtf, flask-limiter, flask-caching, pillow, openpyxl, pandas, numpy, python-dotenv)
+- ✅ **Database Setup**: Created PostgreSQL database and configured environment variables  
+- ✅ **Form Field Updates**: Made Venue Name, Employee Code, and Service Request ID required fields for event creation
+- ✅ **Registration Deadline Logic**: Automatically calculates registration deadline as 2 days after event end date
+- ✅ **UI Improvements**: Added readonly fields with helpful tooltips for auto-calculated registration deadlines
+- ✅ **Backend Validation**: Updated server-side validation to enforce new required fields
+- ✅ **JavaScript Enhancement**: Added automatic date calculation functionality with real-time updates
+
 ### August 12, 2025 - Performance Optimization and Database Improvements
 - ✅ **Database Optimization**: Added comprehensive database indexes for Event model including composite indexes for complex queries
 - ✅ **Caching Layer**: Implemented Flask-Caching with 5-10 minute cache timeouts for dashboard statistics

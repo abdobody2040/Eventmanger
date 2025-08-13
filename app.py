@@ -904,6 +904,18 @@ def create_event():
                 validation_errors.append('End date is required')
             if not end_time:
                 validation_errors.append('End time is required')
+            # Validation for new required fields
+            venue = request.form.get('venue', '').strip()
+            service_request = request.form.get('service_request', '').strip()
+            employee_code = request.form.get('employee_code', '').strip()
+            
+            if not is_online and not venue:
+                validation_errors.append('Venue name is required for offline events')
+            if not service_request:
+                validation_errors.append('Service Request ID is required')
+            if not employee_code:
+                validation_errors.append('Employee Code is required')
+            
             if not registration_deadline_date:
                 validation_errors.append('Registration deadline date is required')
             if not registration_deadline_time:
@@ -955,13 +967,9 @@ def create_event():
                                          categories=categories, event_types=event_types, 
                                          governorates=egyptian_governorates, edit_mode=False)
 
-                if registration_deadline and start_datetime and registration_deadline > start_datetime:
-                    flash('Registration deadline must be before or on the event start date', 'danger')
-                    app_logo = AppSetting.get_setting('app_logo')
-                    return render_template('create_event.html', 
-                                         app_name=app_name, app_logo=app_logo, theme_color=theme_color,
-                                         categories=categories, event_types=event_types, 
-                                         governorates=egyptian_governorates, edit_mode=False)
+                # Update validation: registration deadline can now be after event end date (2 days after)
+                # Remove the old validation that required registration deadline to be before start date
+                pass
 
             except ValueError as e:
                 flash(f'Invalid date/time format: {str(e)}', 'danger')

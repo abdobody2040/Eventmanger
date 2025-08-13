@@ -61,6 +61,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Auto-calculate registration deadline (2 days after end date)
+    const endDateInput = document.getElementById('end_date');
+    const endTimeInput = document.getElementById('end_time');
+    const regDeadlineDateInput = document.getElementById('registration_deadline_date');
+    const regDeadlineTimeInput = document.getElementById('registration_deadline_time');
+
+    function calculateRegistrationDeadline() {
+        if (endDateInput.value) {
+            const endDate = new Date(endDateInput.value);
+            // Add 2 days
+            endDate.setDate(endDate.getDate() + 2);
+            
+            // Format date as YYYY-MM-DD
+            const year = endDate.getFullYear();
+            const month = String(endDate.getMonth() + 1).padStart(2, '0');
+            const day = String(endDate.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+            
+            regDeadlineDateInput.value = formattedDate;
+            
+            // If end time is set, use the same time for registration deadline
+            if (endTimeInput.value) {
+                regDeadlineTimeInput.value = endTimeInput.value;
+            }
+        }
+    }
+
+    // Listen for changes to end date and time
+    if (endDateInput && regDeadlineDateInput) {
+        endDateInput.addEventListener('change', calculateRegistrationDeadline);
+        endTimeInput.addEventListener('change', function() {
+            if (regDeadlineDateInput.value && endTimeInput.value) {
+                regDeadlineTimeInput.value = endTimeInput.value;
+            }
+        });
+    }
+
     // Form validation and submission
     const form = document.getElementById('event_form');
     const submitButton = document.getElementById('submit_event_btn');
