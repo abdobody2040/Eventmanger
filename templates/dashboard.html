@@ -1,0 +1,379 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - PharmaEvents{% endblock %}
+
+{% block styles %}
+<style>
+    .stat-card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .chart-section {
+        margin-bottom: 2rem;
+    }
+    
+    .event-small-card {
+        border-left: 4px solid transparent;
+    }
+    
+    .event-small-card.event-online {
+        border-left-color: #17a2b8;
+    }
+    
+    .event-small-card.event-offline {
+        border-left-color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h2 mb-0">Event Dashboard</h1>
+        <p class="text-muted">Overview and statistics of your events</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('create_event') }}" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-2"></i> Create New Event
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card bg-light">
+            <div class="card-body">
+                <i class="fas fa-calendar-alt text-primary fa-2x mb-3"></i>
+                <div class="stat-value" id="upcoming_events_count">{{ upcoming_events }}</div>
+                <div class="stat-label">Upcoming Events</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card bg-light">
+            <div class="card-body">
+                <i class="fas fa-laptop text-info fa-2x mb-3"></i>
+                <div class="stat-value" id="online_events_count">{{ online_events }}</div>
+                <div class="stat-label">Online Events</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card bg-light">
+            <div class="card-body">
+                <i class="fas fa-map-marker-alt text-success fa-2x mb-3"></i>
+                <div class="stat-value" id="offline_events_count">{{ offline_events }}</div>
+                <div class="stat-label">Offline Events</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+        <div class="card stat-card bg-light">
+            <div class="card-body">
+                <i class="fas fa-hourglass-half text-warning fa-2x mb-3"></i>
+                <div class="stat-value" id="pending_events_count">{{ pending_events_count }}</div>
+                <div class="stat-label">Pending Approval</div>
+                {% if pending_events_count > 0 %}
+                <a href="{{ url_for('events', status='pending') }}" class="btn btn-sm btn-warning mt-2">Review</a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card stat-card bg-light">
+            <div class="card-body">
+                <i class="fas fa-calendar-check text-warning fa-2x mb-3"></i>
+                <div class="stat-value" id="total_events_count">{{ total_events }}</div>
+                <div class="stat-label">Total Events</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                Filter Dashboard Data
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" placeholder="Search events, locations, requesters...">
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select class="form-select">
+                                    <option value="all">All Categories</option>
+                                    {% for category in category_data %}
+                                        <option value="{{ category.name }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select">
+                                    <option value="all">All Types</option>
+                                    <option value="conference">Conference</option>
+                                    <option value="webinar">Webinar</option>
+                                    <option value="workshop">Workshop</option>
+                                    <option value="symposium">Symposium</option>
+                                    <option value="meeting">Meeting</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select">
+                                    <option value="all">All Dates</option>
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="past">Past</option>
+                                    <option value="this_month">This Month</option>
+                                    <option value="last_month">Last Month</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4 mb-md-0">
+        <div class="card chart-section">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-pie me-2"></i> Events by Category
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card chart-section">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-bar me-2"></i> Event Types Distribution
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Events Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card chart-section">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-line me-2"></i> Monthly Event Volume (Last 12 Months)
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Events by Requester -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card chart-section">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-user me-2"></i> Events by Requester
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="requesterChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_admin() and pending_events_count > 0 %}
+<!-- Pending Approval Events -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-hourglass-half me-2"></i> Events Pending Approval ({{ pending_events_count }})
+                    </h5>
+                    <a href="{{ url_for('events', status='pending') }}" class="btn btn-sm btn-outline-dark">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if pending_events_list %}
+                    <div class="list-group list-group-flush">
+                        {% for event in pending_events_list %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">{{ event.name }}</h6>
+                                    <span class="badge bg-warning">Pending</span>
+                                </div>
+                                <div class="row mb-2">
+                                    <div class="col-md-8">
+                                        <p class="mb-1 text-muted small">
+                                            <i class="far fa-calendar-alt me-1"></i> 
+                                            {{ event.start_datetime.strftime('%b %d, %Y') }}
+                                            <span class="mx-1">•</span>
+                                            <i class="{% if event.is_online %}fas fa-laptop{% else %}fas fa-map-marker-alt{% endif %} me-1"></i>
+                                            {% if event.is_online %}Online{% else %}{{ event.governorate }}{% endif %}
+                                        </p>
+                                        <p class="mb-0 text-muted small">
+                                            <i class="fas fa-user me-1"></i> Created by {{ event.creator.email }}
+                                            <span class="mx-1">•</span>
+                                            <i class="far fa-clock me-1"></i> On {{ event.created_at.strftime('%b %d, %Y') }}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            <form method="POST" action="{{ url_for('approve_event', event_id=event.id) }}" style="display: inline;">
+                                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Approve this event?')">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ url_for('reject_event', event_id=event.id) }}" style="display: inline;">
+                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Reject this event?')">
+                                                    <i class="fas fa-times"></i> Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center">
+                        <p class="text-muted mb-0">No events pending approval</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Upcoming Events -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4 mb-md-0">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-day me-2"></i> Upcoming Event Samples
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_events_list %}
+                    <div class="list-group list-group-flush">
+                        {% for event in upcoming_events_list %}
+                            <div class="list-group-item event-small-card {% if event.is_online %}event-online{% else %}event-offline{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ event.name }}</h6>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="far fa-calendar-alt me-1"></i> 
+                                            {{ event.start_datetime.strftime('%b %d, %Y') }}
+                                            <span class="mx-1">•</span>
+                                            <i class="{% if event.is_online %}fas fa-laptop{% else %}fas fa-map-marker-alt{% endif %} me-1"></i>
+                                            {% if event.is_online %}Online{% else %}{{ event.governorate }}{% endif %}
+                                        </p>
+                                        {% if event.categories %}
+                                            <div>
+                                                {% for category in event.categories[:2] %}
+                                                    <span class="badge bg-light text-primary">{{ category.name }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center">
+                        <p class="text-muted mb-0">No upcoming events</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i> Recently Added Events
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_events %}
+                    <div class="list-group list-group-flush">
+                        {% for event in recent_events %}
+                            <div class="list-group-item event-small-card {% if event.is_online %}event-online{% else %}event-offline{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ event.name }}</h6>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="far fa-calendar-alt me-1"></i> 
+                                            {{ event.start_datetime.strftime('%b %d, %Y') }}
+                                            <span class="mx-1">•</span>
+                                            <i class="{% if event.is_online %}fas fa-laptop{% else %}fas fa-map-marker-alt{% endif %} me-1"></i>
+                                            {% if event.is_online %}Online{% else %}{{ event.governorate }}{% endif %}
+                                        </p>
+                                        <p class="mb-0 text-muted small">
+                                            <i class="far fa-clock me-1"></i> Added {{ event.created_at.strftime('%b %d, %Y') }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <a href="{{ url_for('event_details', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center">
+                        <p class="text-muted mb-0">No events added yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Pass chart data from template to JavaScript
+window.categoryChartData = {{ category_data | tojson }};
+window.eventTypeChartData = {{ event_type_data | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

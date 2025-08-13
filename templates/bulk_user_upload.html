@@ -1,0 +1,318 @@
+{% extends "layout.html" %}
+
+{% block title %}Bulk User Upload - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.375rem;
+        padding: 3rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--bs-primary);
+        background-color: #e3f2fd;
+    }
+    
+    .upload-area.dragover {
+        border-color: var(--bs-primary);
+        background-color: #e3f2fd;
+        transform: scale(1.02);
+    }
+    
+    .instruction-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .step-number {
+        background: var(--theme-color, #0f6e84);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 0.75rem;
+    }
+    
+    .file-info {
+        background-color: #e7f3ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h2 mb-0">Bulk User Upload</h1>
+        <p class="text-muted">Upload an Excel file to create multiple users at once</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('settings') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Back to Settings
+        </a>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="instruction-card">
+    <h4 class="mb-3"><i class="fas fa-info-circle me-2"></i>How to Use Bulk User Upload</h4>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="d-flex align-items-start mb-3">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>Download Template</strong>
+                    <p class="mb-0 text-muted">Download the Excel template with the required format</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-start mb-3">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>Fill User Data</strong>
+                    <p class="mb-0 text-muted">Add user information following the template format</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex align-items-start mb-3">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>Upload File</strong>
+                    <p class="mb-0 text-muted">Upload your completed Excel file</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-start">
+                <span class="step-number">4</span>
+                <div>
+                    <strong>Review Results</strong>
+                    <p class="mb-0 text-muted">Check the upload results and any error messages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="bulk_upload_form">
+                    <!-- Download Template Section -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-download me-2"></i>Step 1: Download Template</h5>
+                        <p class="text-muted mb-3">Download the Excel template to ensure your file has the correct format and required columns.</p>
+                        <a href="{{ url_for('download_users_template') }}" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i>Download Excel Template
+                        </a>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Upload Section -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-upload me-2"></i>Step 2: Upload Your File</h5>
+                        <p class="text-muted mb-3">Upload your completed Excel file with user data.</p>
+                        
+                        <div class="upload-area" id="upload_area">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h5>Drop your Excel file here</h5>
+                            <p class="text-muted mb-3">or click to browse</p>
+                            <input type="file" class="form-control d-none" id="users_file" name="users_file" 
+                                   accept=".xlsx,.xls" required>
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('users_file').click()">
+                                Choose File
+                            </button>
+                        </div>
+                        
+                        <div class="file-info d-none" id="file_info">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-excel text-success me-2"></i>
+                                <div>
+                                    <strong id="file_name"></strong>
+                                    <small class="text-muted d-block" id="file_size"></small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearFile()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Submit Section -->
+                    <div class="text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.location.href='{{ url_for('settings') }}'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success" id="upload_btn" disabled>
+                            <i class="fas fa-users me-2"></i>Create Users
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Important Notes</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Required Columns:</strong> Email, Role, Password
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Valid Roles:</strong> admin, event_manager, medical_rep
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>File Format:</strong> Excel (.xlsx or .xls)
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Email:</strong> Must be unique for each user
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-info text-info me-2"></i>
+                        <strong>Password:</strong> Each user must have a password in the Excel file
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Template Columns</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Column</th>
+                            <th>Required</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Email</td>
+                            <td><span class="badge bg-danger">Yes</span></td>
+                        </tr>
+                        <tr>
+                            <td>Role</td>
+                            <td><span class="badge bg-danger">Yes</span></td>
+                        </tr>
+                        <tr>
+                            <td>Password</td>
+                            <td><span class="badge bg-danger">Yes</span></td>
+                        </tr>
+                        <tr>
+                            <td>Full Name</td>
+                            <td><span class="badge bg-success">Optional</span></td>
+                        </tr>
+                        <tr>
+                            <td>Department</td>
+                            <td><span class="badge bg-secondary">No</span></td>
+                        </tr>
+                        <tr>
+                            <td>Phone</td>
+                            <td><span class="badge bg-secondary">No</span></td>
+                        </tr>
+                        <tr>
+                            <td>Employee ID</td>
+                            <td><span class="badge bg-secondary">No</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('upload_area');
+    const fileInput = document.getElementById('users_file');
+    const fileInfo = document.getElementById('file_info');
+    const uploadBtn = document.getElementById('upload_btn');
+    
+    // Handle file input change
+    fileInput.addEventListener('change', function(e) {
+        handleFile(e.target.files[0]);
+    });
+    
+    // Handle drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                fileInput.files = files;
+                handleFile(file);
+            } else {
+                alert('Please select an Excel file (.xlsx or .xls)');
+            }
+        }
+    });
+    
+    function handleFile(file) {
+        if (!file) return;
+        
+        // Show file info
+        document.getElementById('file_name').textContent = file.name;
+        document.getElementById('file_size').textContent = formatFileSize(file.size);
+        fileInfo.classList.remove('d-none');
+        uploadArea.style.display = 'none';
+        uploadBtn.disabled = false;
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    window.clearFile = function() {
+        fileInput.value = '';
+        fileInfo.classList.add('d-none');
+        uploadArea.style.display = 'block';
+        uploadBtn.disabled = true;
+    };
+});
+</script>
+{% endblock %}

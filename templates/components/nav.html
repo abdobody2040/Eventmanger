@@ -1,0 +1,52 @@
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}">
+            {% if app_logo %}
+                <img src="{{ app_logo }}" alt="{{ app_name }} Logo" width="36" height="36" class="me-2" style="object-fit: contain;">
+            {% else %}
+                <div class="me-2 d-flex align-items-center justify-content-center bg-primary text-white rounded" style="width: 36px; height: 36px; font-size: 18px; font-weight: bold;">
+                    {{ app_name[0] if app_name else 'E' }}
+                </div>
+            {% endif %}
+            <span>{{ app_name }}</span>
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == url_for('dashboard') %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == url_for('events') %}active{% endif %}" href="{{ url_for('events') }}">
+                        <i class="fas fa-calendar-alt me-1"></i> Events
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == url_for('create_event') %}active{% endif %}" href="{{ url_for('create_event') }}">
+                        <i class="fas fa-plus-circle me-1"></i> Create Event
+                    </a>
+                </li>
+                
+                {% if current_user.is_admin() %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == url_for('settings') %}active{% endif %}" href="{{ url_for('settings') }}">
+                            <i class="fas fa-cog me-1"></i> Settings
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <div class="d-flex">
+                {% include 'components/user_menu.html' %}
+            </div>
+        </div>
+    </div>
+</nav>

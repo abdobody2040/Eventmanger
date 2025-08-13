@@ -1,0 +1,545 @@
+{% extends "layout.html" %}
+
+{% block title %}Settings - PharmaEvents{% endblock %}
+
+{% block styles %}
+<style>
+    .settings-section {
+        margin-bottom: 2.5rem;
+    }
+
+    .settings-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .settings-header .icon {
+        color: #0f6e84;
+        margin-right: 0.5rem;
+    }
+
+    .settings-card {
+        height: 100%;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(15, 110, 132, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2 mb-0">Application Settings</h1>
+        <p class="text-muted">Manage application configuration and user access</p>
+    </div>
+</div>
+
+<!-- Alerts Container -->
+<div id="alerts_container"></div>
+
+<!-- Theme Color Settings -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-palette fa-lg icon"></i>
+        <h3 class="mb-0">Theme Colors</h3>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <label class="form-label">Primary Theme Color</label>
+
+                    <!-- Color Wheel Picker -->
+                    <div class="mb-3">
+                        <label for="color_picker" class="form-label">Custom Color Picker</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="color" class="form-control form-control-color" id="color_picker" value="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}" title="Choose your color">
+                            <div class="color-preview" id="color_preview" style="width: 50px; height: 50px; border: 2px solid #ddd; border-radius: 8px; background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }};"></div>
+                            <button type="button" class="btn btn-primary" id="apply_custom_color">Apply Color</button>
+                        </div>
+                        <small class="text-muted">Pick any color from the color wheel</small>
+                    </div>
+
+                    <!-- Quick Preset Colors -->
+                    <div class="mb-3">
+                        <label class="form-label">Quick Presets</label>
+                        <div class="row g-2">
+                            <!-- Blues -->
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#0f6e84" style="background-color: #0f6e84; color: white;">
+                                    Blue
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#007bff" style="background-color: #007bff; color: white;">
+                                    Primary Blue
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#0056b3" style="background-color: #0056b3; color: white;">
+                                    Navy Blue
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#17a2b8" style="background-color: #17a2b8; color: white;">
+                                    Cyan
+                                </button>
+                            </div>
+
+                            <!-- Greens -->
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#198754" style="background-color: #198754; color: white;">
+                                    Green
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#20c997" style="background-color: #20c997; color: white;">
+                                    Mint Green
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#009688" style="background-color: #009688; color: white;">
+                                    Teal
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#4caf50" style="background-color: #4caf50; color: white;">
+                                    Material Green
+                                </button>
+                            </div>
+
+                            <!-- Purples -->
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6f42c1" style="background-color: #6f42c1; color: white;">
+                                    Purple
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#8e44ad" style="background-color: #8e44ad; color: white;">
+                                    Deep Purple
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#9c27b0" style="background-color: #9c27b0; color: white;">
+                                    Magenta
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#673ab7" style="background-color: #673ab7; color: white;">
+                                    Indigo
+                                </button>
+                            </div>
+
+                            <!-- Reds & Pinks -->
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#dc3545" style="background-color: #dc3545; color: white;">
+                                    Red
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#e74c3c" style="background-color: #e74c3c; color: white;">
+                                    Bright Red
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#e91e63" style="background-color: #e91e63; color: white;">
+                                    Pink
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#c2185b" style="background-color: #c2185b; color: white;">
+                                    Deep Pink
+                                </button>
+                            </div>
+
+                            <!-- Oranges & Yellows -->
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#fd7e14" style="background-color: #fd7e14; color: white;">
+                                    Orange
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ff9800" style="background-color: #ff9800; color: white;">
+                                    Amber
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ffc107" style="background-color: #ffc107; color: black;">
+                                    Yellow
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ff5722" style="background-color: #ff5722; color: white;">
+                                    Deep Orange
+                                </button>
+                            </div>
+
+                            <!-- Neutrals & Darks -->
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6c757d" style="background-color: #6c757d; color: white;">
+                                    Gray
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#495057" style="background-color: #495057; color: white;">
+                                    Dark Gray
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#343a40" style="background-color: #343a40; color: white;">
+                                    Dark
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#795548" style="background-color: #795548; color: white;">
+                                    Brown
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted">Click any preset to quickly apply</small>
+                    </div>
+
+                    <!-- Current Color Display -->
+                    <div class="current-theme-display p-3 border rounded" style="background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}; color: white;">
+                        <strong>Current Theme Color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Application Details -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-info-circle fa-lg icon"></i>
+        <h3 class="mb-0">Application Details</h3>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="app_name" class="form-label">Application Name</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="app_name" value="{{ app_name }}" placeholder="Application Name">
+                            <button class="btn btn-primary" type="button" id="update_app_name">Update Name</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="app_logo" class="form-label">Application Logo</label>
+
+                        <!-- Current Logo Display -->
+                        {% if app_logo %}
+                        <div class="mb-2" id="current_logo_section">
+                            <small class="text-muted d-block">Current Logo:</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{ app_logo }}" alt="Current Logo" 
+                                     style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+                                <button class="btn btn-sm btn-outline-danger" type="button" id="remove_logo" title="Remove current logo">
+                                    <i class="fas fa-trash-alt"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="app_logo" accept="image/png,image/jpeg,image/jpg,image/svg+xml">
+                            <button class="btn btn-primary" type="button" id="upload_logo">Upload Logo</button>
+                        </div>
+                        <small class="text-muted">Recommended size: 200x200px, Formats: PNG, JPG, SVG (Max: 2MB)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Login Page Content -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-sign-in-alt fa-lg icon"></i>
+        <h3 class="mb-0">Login Page Content</h3>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="main_tagline" class="form-label">Main Tagline</label>
+                        <input type="text" class="form-control" id="main_tagline" value="{{ main_tagline or 'Compliance-Driven Event Management' }}" placeholder="Main tagline shown on login page">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="main_header" class="form-label">Main Header</label>
+                        <input type="text" class="form-control" id="main_header" value="{{ main_header or 'Secure & Compliant Event Management for ' + app_name }}" placeholder="Main header text">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="mb-3">
+                        <label for="app_description" class="form-label">Application Description</label>
+                        <textarea class="form-control" id="app_description" rows="2" placeholder="Streamline your pharmaceutical events while maintaining strict regulatory compliance...">{{ app_description or 'Streamline your pharmaceutical events while maintaining strict regulatory compliance with GDPR, HIPAA, and Sunshine Act/EFPIA requirements.' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="feature1_title" class="form-label">Feature 1 Title</label>
+                        <input type="text" class="form-control" id="feature1_title" value="{{ feature1_title or 'Regulatory Compliance' }}" placeholder="Feature title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="feature1_description" class="form-label">Feature 1 Description</label>
+                        <textarea class="form-control" id="feature1_description" rows="3" placeholder="Feature description">{{ feature1_description or 'Built-in tools for Sunshine Act reporting, HCP payment tracking, and compliance checks.' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="feature2_title" class="form-label">Feature 2 Title</label>
+                        <input type="text" class="form-control" id="feature2_title" value="{{ feature2_title or 'Role-based Access Control' }}" placeholder="Feature title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="feature2_description" class="form-label">Feature 2 Description</label>
+                        <textarea class="form-control" id="feature2_description" rows="3" placeholder="Feature description">{{ feature2_description or 'Granular permissions for admins, event managers, speakers, and attendees.' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" id="update_login_content">
+                        <i class="fas fa-save me-2"></i> Update Login Page Content
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Categories Management -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-tags fa-lg icon"></i>
+        <h3 class="mb-0">Event Categories</h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card settings-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Available Categories</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Category Name</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="category_list">
+                                {% for category in categories %}
+                                    <tr data-id="{{ category.id }}">
+                                        <td>{{ category.name }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-danger btn-delete-category" data-id="{{ category.id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card settings-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Add New Category</h5>
+                </div>
+                <div class="card-body">
+                    <form id="add_category_form">
+                        <div class="mb-3">
+                            <label for="category_name" class="form-label">Category Name</label>
+                            <input type="text" class="form-control" id="category_name" placeholder="e.g., Cardiology" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-plus-circle me-2"></i> Add Category
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Types Management -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-project-diagram fa-lg icon"></i>
+        <h3 class="mb-0">Event Types</h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card settings-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Available Event Types</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Event Type Name</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="type_list">
+                                {% for type in event_types %}
+                                    <tr data-id="{{ type.id }}">
+                                        <td>{{ type.name }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-danger btn-delete-type" data-id="{{ type.id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card settings-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Add New Event Type</h5>
+                </div>
+                <div class="card-body">
+                    <form id="add_type_form">
+                        <div class="mb-3">
+                            <label for="type_name" class="form-label">Event Type Name</label>
+                            <input type="text" class="form-control" id="type_name" placeholder="e.g., Workshop" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-plus-circle me-2"></i> Add Event Type
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Management -->
+<div class="settings-section">
+    <div class="settings-header d-flex align-items-center">
+        <i class="fas fa-users-cog fa-lg icon"></i>
+        <h3 class="mb-0">User Management</h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card settings-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">User Accounts</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user_list">
+                                {% for user in users %}
+                                    <tr data-id="{{ user.id }}">
+                                        <td>{{ user.email }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if user.role == 'admin' %}primary{% elif user.role == 'medical_rep' %}info{% else %}secondary{% endif %}">
+                                                {% if user.role == 'medical_rep' %}MEDICAL REP{% else %}{{ user.role|upper }}{% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            {% if user.id != current_user.id %}
+                                                <button class="btn btn-sm btn-danger btn-delete-user" data-id="{{ user.id }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            {% else %}
+                                                <span class="badge bg-info">Current User</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card settings-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Add New User</h5>
+                </div>
+                <div class="card-body">
+                    <form id="add_user_form">
+                        <div class="mb-3">
+                            <label for="user_email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="user_email" placeholder="user@example.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user_password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="user_password" placeholder="Minimum 6 characters" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user_role" class="form-label">Role</label>
+                            <select class="form-select" id="user_role" required>
+                                <option value="event_manager">Event Manager</option>
+                                <option value="medical_rep">Medical Representative</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-user-plus me-2"></i> Add User
+                        </button>
+                        <a href="{{ url_for('bulk_user_upload') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-upload me-2"></i> Bulk Upload from Excel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}
