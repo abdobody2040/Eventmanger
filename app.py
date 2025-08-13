@@ -1367,7 +1367,45 @@ def delete_event(event_id):
 def export_events():
     """Export events to CSV file with optimized streaming"""
     
-    def generate_csv():
+    # Capture user permissions and fetch all events data in the request context
+    can_approve = current_user.can_approve_events()
+    user_id = current_user.id
+    user_email = current_user.email
+    
+    # Fetch all events data and convert to plain dictionaries within the request context
+    if can_approve:
+        events_query = Event.query.options(
+            db.joinedload(Event.event_type),
+            db.joinedload(Event.creator),
+            db.joinedload(Event.categories)
+        ).order_by(Event.created_at.desc()).all()
+    else:
+        events_query = Event.query.options(
+            db.joinedload(Event.event_type),
+            db.joinedload(Event.creator),
+            db.joinedload(Event.categories)
+        ).filter_by(user_id=user_id).order_by(Event.created_at.desc()).all()
+    
+    # Convert to plain dictionaries to avoid session issues
+    events_data = []
+    for event in events_query:
+        event_dict = {
+            'id': event.id,
+            'name': event.name,
+            'description': event.description or '',
+            'event_type': event.event_type.name if event.event_type else 'Not specified',
+            'is_online': event.is_online,
+            'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M') if event.start_datetime else '',
+            'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else '',
+            'governorate': event.governorate or '',
+            'categories': ', '.join([category.name for category in event.categories]) if event.categories else 'None',
+            'creator_email': event.creator.email if event.creator else '',
+            'created_at': event.created_at.strftime('%Y-%m-%d %H:%M') if event.created_at else '',
+            'status': event.status or 'Active'
+        }
+        events_data.append(event_dict)
+    
+    def generate_csv(events_list):
         """Generator function for streaming CSV export"""
         output = io.StringIO()
         fieldnames = [
@@ -1382,76 +1420,40 @@ def export_events():
         output.seek(0)
         output.truncate(0)
         
-        # Process events in smaller batches to avoid memory issues
-        batch_size = 50  # Reduced batch size
-        offset = 0
-        total_exported = 0
+        # Process events in batches
+        batch_size = 50
+        total_events = len(events_list)
         
-        while True:
-            # Get batch of events with optimized query
-            if current_user.can_approve_events():
-                batch_query = Event.query.options(
-                    db.joinedload(Event.event_type),
-                    db.joinedload(Event.creator),
-                    db.joinedload(Event.categories)
-                ).order_by(Event.created_at.desc()).offset(offset).limit(batch_size)
-            else:
-                batch_query = Event.query.options(
-                    db.joinedload(Event.event_type),
-                    db.joinedload(Event.creator),
-                    db.joinedload(Event.categories)
-                ).filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).offset(offset).limit(batch_size)
+        for i in range(0, total_events, batch_size):
+            batch = events_list[i:i + batch_size]
             
-            events_batch = batch_query.all()
-            
-            if not events_batch:
-                break
-                
-            for event in events_batch:
-                # Format event type
-                event_type = event.event_type.name if event.event_type else 'Not specified'
-                
-                # Format categories
-                categories = ', '.join([category.name for category in event.categories]) if event.categories else 'None'
-                
-                # Format dates
-                start_date = event.start_datetime.strftime('%Y-%m-%d %H:%M') if event.start_datetime else ''
-                end_date = event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else ''
-                created_at = event.created_at.strftime('%Y-%m-%d %H:%M') if event.created_at else ''
-                
+            for event_data in batch:
                 writer.writerow({
-                    'ID': event.id,
-                    'Event Name': event.name,
-                    'Description': event.description or '',
-                    'Event Type': event_type,
-                    'Is Online': 'Yes' if event.is_online else 'No',
-                    'Start Date': start_date,
-                    'End Date': end_date,
-                    'Governorate': event.governorate or '',
-                    'Categories': categories,
-                    'Created By': event.creator.email if event.creator else '',
-                    'Created At': created_at,
-                    'Status': event.status or 'Active'
+                    'ID': event_data['id'],
+                    'Event Name': event_data['name'],
+                    'Description': event_data['description'],
+                    'Event Type': event_data['event_type'],
+                    'Is Online': 'Yes' if event_data['is_online'] else 'No',
+                    'Start Date': event_data['start_datetime'],
+                    'End Date': event_data['end_datetime'],
+                    'Governorate': event_data['governorate'],
+                    'Categories': event_data['categories'],
+                    'Created By': event_data['creator_email'],
+                    'Created At': event_data['created_at'],
+                    'Status': event_data['status']
                 })
                 
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
-            
-            total_exported += len(events_batch)
-            offset += batch_size
-            
-            # Log progress for large exports
-            if total_exported % 500 == 0:
-                app.logger.info(f'Export progress: {total_exported} events processed')
     
     try:
         # Create streaming response
-        response = make_response(generate_csv())
+        response = make_response(generate_csv(events_data))
         response.headers['Content-Type'] = 'text/csv'
         response.headers['Content-Disposition'] = f'attachment; filename=events_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         
-        app.logger.info(f'Events export started by user {current_user.email}')
+        app.logger.info(f'Events export started by user {user_email}')
         return response
         
     except Exception as e:

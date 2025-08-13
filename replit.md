@@ -69,10 +69,13 @@ Configuration: Environment variables only - no hardcoded values in source code.
 
 ## Recent Changes
 
-### August 13, 2025 - Replit Agent Migration and Form Enhancements
+### August 13, 2025 - Replit Agent Migration and Bug Fixes
 - ✅ **Migration Completed**: Successfully migrated PharmaEvents from Replit Agent to standard Replit environment
 - ✅ **Dependencies Installed**: Added all required Flask extensions (flask-wtf, flask-limiter, flask-caching, pillow, openpyxl, pandas, numpy, python-dotenv)
 - ✅ **Database Setup**: Created PostgreSQL database and configured environment variables  
+- ✅ **CSV Export Fix**: Fixed context error in events export functionality by converting SQLAlchemy objects to dictionaries within request context
+- ✅ **Environment Configuration**: Set up SESSION_SECRET, ADMIN_EMAIL, and ADMIN_PASSWORD through Replit Secrets
+- ✅ **Application Running**: Successfully deployed on port 5000 with Gunicorn WSGI server
 - ✅ **Form Field Updates**: Made Venue Name, Employee Code, and Service Request ID required fields for event creation
 - ✅ **Registration Deadline Logic**: Automatically calculates registration deadline as 2 days after event end date
 - ✅ **UI Improvements**: Added readonly fields with helpful tooltips for auto-calculated registration deadlines
