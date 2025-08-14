@@ -55,3 +55,11 @@ psycopg2-binary
 python-dotenv
 sqlalchemy
 werkzeug
+flask-caching
+flask-limiter
+flask-wtf
+numpy
+openpyxl
+pandas
+pillow
+python-dotenv

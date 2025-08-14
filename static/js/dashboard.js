@@ -81,7 +81,18 @@ function loadDashboardStats() {
 
 // Initialize Category Chart
 function initCategoryChart() {
-    fetch('/api/dashboard/categories', { 
+    // Get current filter parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParams = new URLSearchParams();
+    
+    if (urlParams.get('search')) filterParams.append('search', urlParams.get('search'));
+    if (urlParams.get('category')) filterParams.append('category', urlParams.get('category'));
+    if (urlParams.get('type')) filterParams.append('type', urlParams.get('type'));
+    if (urlParams.get('date')) filterParams.append('date', urlParams.get('date'));
+    
+    const apiUrl = `/api/dashboard/categories${filterParams.toString() ? '?' + filterParams.toString() : ''}`;
+    
+    fetch(apiUrl, { 
         credentials: 'include',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -163,7 +174,18 @@ function initCategoryChart() {
 
 // Initialize Event Type Distribution Chart
 function initTypeChart() {
-    fetch('/api/dashboard/event-types', { 
+    // Get current filter parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParams = new URLSearchParams();
+    
+    if (urlParams.get('search')) filterParams.append('search', urlParams.get('search'));
+    if (urlParams.get('category')) filterParams.append('category', urlParams.get('category'));
+    if (urlParams.get('type')) filterParams.append('type', urlParams.get('type'));
+    if (urlParams.get('date')) filterParams.append('date', urlParams.get('date'));
+    
+    const apiUrl = `/api/dashboard/event-types${filterParams.toString() ? '?' + filterParams.toString() : ''}`;
+    
+    fetch(apiUrl, { 
         credentials: 'include',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -274,7 +296,18 @@ function initTypeChart() {
 
 // Initialize Monthly Events Chart
 function initMonthlyChart() {
-    fetch('/api/dashboard/monthly', { 
+    // Get current filter parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParams = new URLSearchParams();
+    
+    if (urlParams.get('search')) filterParams.append('search', urlParams.get('search'));
+    if (urlParams.get('category')) filterParams.append('category', urlParams.get('category'));
+    if (urlParams.get('type')) filterParams.append('type', urlParams.get('type'));
+    if (urlParams.get('date')) filterParams.append('date', urlParams.get('date'));
+    
+    const apiUrl = `/api/dashboard/monthly${filterParams.toString() ? '?' + filterParams.toString() : ''}`;
+    
+    fetch(apiUrl, { 
         credentials: 'include',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -373,7 +406,18 @@ function initMonthlyChart() {
 
 // Initialize Requester Chart
 function initRequesterChart() {
-    fetch('/api/dashboard/requesters', { 
+    // Get current filter parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParams = new URLSearchParams();
+    
+    if (urlParams.get('search')) filterParams.append('search', urlParams.get('search'));
+    if (urlParams.get('category')) filterParams.append('category', urlParams.get('category'));
+    if (urlParams.get('type')) filterParams.append('type', urlParams.get('type'));
+    if (urlParams.get('date')) filterParams.append('date', urlParams.get('date'));
+    
+    const apiUrl = `/api/dashboard/requesters${filterParams.toString() ? '?' + filterParams.toString() : ''}`;
+    
+    fetch(apiUrl, { 
         credentials: 'include',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'

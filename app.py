@@ -1923,6 +1923,65 @@ def get_filtered_type_data(user_id, is_admin, search_query='', category_filter='
     results = query.group_by(EventType.id, EventType.name).all()
     return [{'name': name, 'count': count} for name, count in results]
 
+def get_filtered_monthly_data(user_id, is_admin, search_query='', category_filter='all', type_filter='all', date_filter='all'):
+    """Get filtered monthly data for charts"""
+    from sqlalchemy import func, extract
+    current_year = datetime.now().year
+    
+    # Build base query
+    if is_admin:
+        query = db.session.query(
+            extract('month', Event.start_datetime).label('month'),
+            func.count(Event.id).label('count')
+        ).filter(extract('year', Event.start_datetime) == current_year)
+    else:
+        query = db.session.query(
+            extract('month', Event.start_datetime).label('month'),
+            func.count(Event.id).label('count')
+        ).filter(
+            Event.user_id == user_id,
+            extract('year', Event.start_datetime) == current_year
+        )
+    
+    # Apply filters
+    query = apply_chart_filters(query, search_query, category_filter, type_filter, date_filter)
+    
+    results = query.group_by(extract('month', Event.start_datetime)).all()
+    
+    # Initialize all months with 0
+    monthly_counts = [0] * 12
+    for month, count in results:
+        if month:
+            monthly_counts[int(month) - 1] = count
+    
+    return {
+        'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        'data': monthly_counts
+    }
+
+def get_filtered_requester_data(user_id, is_admin, search_query='', category_filter='all', type_filter='all', date_filter='all'):
+    """Get filtered requester data for charts"""
+    from sqlalchemy import func
+    
+    # Build base query
+    if is_admin:
+        query = db.session.query(
+            User.email,
+            func.count(Event.id).label('event_count')
+        ).join(Event, User.id == Event.user_id)
+    else:
+        # For regular users, only show their own data
+        query = db.session.query(
+            User.email,
+            func.count(Event.id).label('event_count')
+        ).join(Event, User.id == Event.user_id).filter(Event.user_id == user_id)
+    
+    # Apply filters
+    query = apply_chart_filters(query, search_query, category_filter, type_filter, date_filter)
+    
+    results = query.group_by(User.id, User.email).all()
+    return [{'name': email, 'count': count} for email, count in results]
+
 def apply_chart_filters(query, search_query='', category_filter='all', type_filter='all', date_filter='all'):
     """Apply common filters to chart queries"""
     now = datetime.now()
@@ -1998,10 +2057,20 @@ def api_dashboard_stats():
 def api_category_data():
     from flask import jsonify
     try:
-        # Use cached category data for better performance
-        categories_data = get_category_data_cached(
+        # Get filter parameters from URL
+        search_query = request.args.get('search', '').strip()
+        category_filter = request.args.get('category', 'all')
+        type_filter = request.args.get('type', 'all')
+        date_filter = request.args.get('date', 'all')
+        
+        # Use filtered data instead of cached data
+        categories_data = get_filtered_category_data(
             user_id=current_user.id,
-            is_admin=current_user.can_approve_events()
+            is_admin=current_user.can_approve_events(),
+            search_query=search_query,
+            category_filter=category_filter,
+            type_filter=type_filter,
+            date_filter=date_filter
         )
         return jsonify(categories_data)
     except Exception as e:
@@ -2014,10 +2083,20 @@ def api_monthly_data():
     from flask import jsonify
     
     try:
-        # Use cached monthly data for better performance
-        monthly_data = get_monthly_data_cached(
+        # Get filter parameters from URL
+        search_query = request.args.get('search', '').strip()
+        category_filter = request.args.get('category', 'all')
+        type_filter = request.args.get('type', 'all')
+        date_filter = request.args.get('date', 'all')
+        
+        # Use filtered monthly data
+        monthly_data = get_filtered_monthly_data(
             user_id=current_user.id,
-            is_admin=current_user.can_approve_events()
+            is_admin=current_user.can_approve_events(),
+            search_query=search_query,
+            category_filter=category_filter,
+            type_filter=type_filter,
+            date_filter=date_filter
         )
         return jsonify(monthly_data)
     except Exception as e:
@@ -2073,10 +2152,20 @@ def get_event_types_data_cached(user_id, is_admin):
 def api_event_types_data():
     from flask import jsonify
     try:
-        # Use cached event types data for better performance
-        event_types_data = get_event_types_data_cached(
+        # Get filter parameters from URL
+        search_query = request.args.get('search', '').strip()
+        category_filter = request.args.get('category', 'all')
+        type_filter = request.args.get('type', 'all')
+        date_filter = request.args.get('date', 'all')
+        
+        # Use filtered data instead of cached data
+        event_types_data = get_filtered_type_data(
             user_id=current_user.id,
-            is_admin=current_user.can_approve_events()
+            is_admin=current_user.can_approve_events(),
+            search_query=search_query,
+            category_filter=category_filter,
+            type_filter=type_filter,
+            date_filter=date_filter
         )
         return jsonify(event_types_data)
     except Exception as e:
@@ -2135,11 +2224,25 @@ def get_requester_data_cached(user_id, is_admin):
 def api_requester_data():
     from flask import jsonify
     try:
-        # Use cached requester data for better performance
-        requester_data = get_requester_data_cached(
+        # Get filter parameters from URL
+        search_query = request.args.get('search', '').strip()
+        category_filter = request.args.get('category', 'all')
+        type_filter = request.args.get('type', 'all')
+        date_filter = request.args.get('date', 'all')
+        
+        # Use filtered requester data instead of cached data
+        requester_data = get_filtered_requester_data(
             user_id=current_user.id,
-            is_admin=current_user.can_approve_events()
+            is_admin=current_user.can_approve_events(),
+            search_query=search_query,
+            category_filter=category_filter,
+            type_filter=type_filter,
+            date_filter=date_filter
         )
+        
+        # Sort by count (descending order)
+        requester_data.sort(key=lambda x: x['count'], reverse=True)
+        
         return jsonify(requester_data)
     except Exception as e:
         app.logger.error(f'Error getting requester data: {str(e)}')
