@@ -27,6 +27,19 @@
         z-index: 10;
     }
 
+    .badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        max-width: 200px;
+        justify-content: flex-end;
+    }
+
+    .badge-container .badge {
+        font-size: 0.65rem;
+        white-space: nowrap;
+    }
+
     .card-category {
         display: inline-block;
         margin-right: 0.25rem;
@@ -142,24 +155,36 @@
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card event-card">
                     <div class="event-banner">
-                        <span class="badge event-badge {% if event.is_online %}bg-info{% else %}bg-success{% endif %}">
-                            {{ event.status if event.status else 'Active' }}
-                        </span>
-
-                        <!-- Approval status badge -->
-                        {% if event.status == 'pending' %}
-                            <span class="badge bg-warning position-absolute" style="right: 10px; top: 10px;">
-                                <i class="fas fa-hourglass-half me-1"></i> Pending
+                        <!-- Badge container with multiple badges -->
+                        <div class="position-absolute badge-container" style="top: 10px; right: 10px; z-index: 10;">
+                            <!-- Online/Offline Badge -->
+                            <span class="badge {% if event.is_online %}bg-info{% else %}bg-success{% endif %}">
+                                <i class="fas {% if event.is_online %}fa-laptop{% else %}fa-map-marker-alt{% endif %} me-1"></i>
+                                {% if event.is_online %}Online{% else %}In-Person{% endif %}
                             </span>
-                        {% elif event.status == 'declined' %}
-                            <span class="badge bg-danger position-absolute" style="right: 10px; top: 10px;">
-                                <i class="fas fa-times-circle me-1"></i> Declined
+                            
+                            <!-- Event Type Badge -->
+                            {% if event.event_type %}
+                            <span class="badge bg-primary">
+                                <i class="fas fa-tag me-1"></i>{{ event.event_type.name }}
                             </span>
-                        {% elif event.status == 'active' %}
-                            <span class="badge bg-success position-absolute" style="right: 10px; top: 10px;">
-                                <i class="fas fa-check-circle me-1"></i> Active
-                            </span>
-                        {% endif %}
+                            {% endif %}
+                            
+                            <!-- Status Badge -->
+                            {% if event.status == 'pending' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-hourglass-half me-1"></i> Pending
+                                </span>
+                            {% elif event.status == 'declined' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle me-1"></i> Declined
+                                </span>
+                            {% elif event.status == 'active' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i> Active
+                                </span>
+                            {% endif %}
+                        </div>
 
                         {% if event.image_file %}
                             <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" alt="{{ event.name }}">
@@ -174,13 +199,6 @@
 
                     <div class="card-body">
                         <h5 class="card-title text-truncate">{{ event.name }}</h5>
-
-                        <div class="mb-2">
-                            <span class="badge bg-light text-dark">
-                                <i class="fas {% if event.event_type %}fa-tag{% else %}fa-question-circle{% endif %} me-1"></i>
-                                {% if event.event_type %}{{ event.event_type.name }}{% else %}Unspecified{% endif %}
-                            </span>
-                        </div>
 
                         <div class="event-info">
                             <i class="far fa-calendar-alt text-muted"></i>

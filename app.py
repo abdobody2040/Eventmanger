@@ -659,7 +659,7 @@ def dashboard():
             search_filter = db.or_(
                 Event.name.ilike(f'%{search_query}%'),
                 Event.description.ilike(f'%{search_query}%'),
-                Event.location.ilike(f'%{search_query}%')
+                Event.governorate.ilike(f'%{search_query}%')
             )
             recent_query = recent_query.filter(search_filter)
             upcoming_query = upcoming_query.filter(search_filter)
@@ -793,13 +793,13 @@ def events():
                 db.joinedload(Event.categories)
             )
         
-        # Apply search filter (search in name, description, and location)
+        # Apply search filter (search in name, description, and governorate)
         if search_query:
             query = query.filter(
                 db.or_(
                     Event.name.ilike(f'%{search_query}%'),
                     Event.description.ilike(f'%{search_query}%'),
-                    Event.location.ilike(f'%{search_query}%')
+                    Event.governorate.ilike(f'%{search_query}%')
                 )
             )
         
@@ -1833,7 +1833,7 @@ def get_filtered_dashboard_stats(user_id, is_admin, search_query='', category_fi
             db.or_(
                 Event.name.ilike(f'%{search_query}%'),
                 Event.description.ilike(f'%{search_query}%'),
-                Event.location.ilike(f'%{search_query}%')
+                Event.governorate.ilike(f'%{search_query}%')
             )
         )
     
@@ -1992,7 +1992,7 @@ def apply_chart_filters(query, search_query='', category_filter='all', type_filt
             db.or_(
                 Event.name.ilike(f'%{search_query}%'),
                 Event.description.ilike(f'%{search_query}%'),
-                Event.location.ilike(f'%{search_query}%')
+                Event.governorate.ilike(f'%{search_query}%')
             )
         )
     
