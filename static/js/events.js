@@ -43,6 +43,7 @@ function applyFilters() {
     const categorySelect = document.getElementById('category_filter');
     const typeSelect = document.getElementById('type_filter');
     const dateSelect = document.getElementById('date_filter');
+    const statusSelect = document.getElementById('status_filter');
     
     // Build query string
     const params = new URLSearchParams();
@@ -61,6 +62,10 @@ function applyFilters() {
     
     if (dateSelect && dateSelect.value !== 'all') {
         params.append('date', dateSelect.value);
+    }
+    
+    if (statusSelect && statusSelect.value !== 'all') {
+        params.append('status', statusSelect.value);
     }
     
     // Redirect with filters

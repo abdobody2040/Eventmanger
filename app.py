@@ -599,14 +599,33 @@ def dashboard():
     app_name = AppSetting.get_setting('app_name', 'PharmaEvents')
     theme_color = AppSetting.get_setting('theme_color', '#0f6e84')
 
+    # Get filter parameters
+    search_query = request.args.get('search', '').strip()
+    category_filter = request.args.get('category', 'all')
+    type_filter = request.args.get('type', 'all')
+    date_filter = request.args.get('date', 'all')
+
+    # Get categories and event types for filter dropdowns
+    try:
+        categories = EventCategory.query.all()
+        event_types = EventType.query.all()
+    except Exception as e:
+        app.logger.error(f'Error fetching categories/types: {str(e)}')
+        categories = []
+        event_types = []
+
     # Use cached dashboard statistics for better performance
     try:
         now = datetime.now()
         
-        # Get cached stats
-        stats = get_dashboard_stats_cached(
+        # Get cached stats (apply filters for statistics)
+        stats = get_filtered_dashboard_stats(
             user_id=current_user.id,
-            is_admin=current_user.can_approve_events()
+            is_admin=current_user.can_approve_events(),
+            search_query=search_query,
+            category_filter=category_filter,
+            type_filter=type_filter,
+            date_filter=date_filter
         )
         
         total_events = stats['total_events']
@@ -615,25 +634,78 @@ def dashboard():
         offline_events = stats['offline_events']
         pending_events_count = stats['pending_events']
 
-        # Optimized recent and upcoming events queries with indexes
+        # Apply filters to recent and upcoming events
         if current_user.can_approve_events():
-            recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
-            upcoming_events_list = Event.query.filter(Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
+            recent_query = Event.query.options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
+            upcoming_query = Event.query.filter(Event.start_datetime > now).options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         else:
-            recent_events = Event.query.filter_by(user_id=current_user.id).order_by(Event.created_at.desc()).limit(5).all()
-            upcoming_events_list = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).order_by(Event.start_datetime.asc()).limit(5).all()
+            recent_query = Event.query.filter_by(user_id=current_user.id).options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
+            upcoming_query = Event.query.filter(Event.user_id == current_user.id, Event.start_datetime > now).options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
 
-        # Simplified chart data (avoid loading all events)
-        category_data = [
-            {'name': 'Cardiology', 'count': 2},
-            {'name': 'Pediatrics', 'count': 1}, 
-            {'name': 'Medical Education', 'count': 1}
-        ]
-        event_type_data = [
-            {'name': 'Conference', 'count': 2},
-            {'name': 'Webinar', 'count': 1},
-            {'name': 'Workshop', 'count': 1}
-        ]
+        # Apply search filter
+        if search_query:
+            search_filter = db.or_(
+                Event.name.ilike(f'%{search_query}%'),
+                Event.description.ilike(f'%{search_query}%'),
+                Event.location.ilike(f'%{search_query}%')
+            )
+            recent_query = recent_query.filter(search_filter)
+            upcoming_query = upcoming_query.filter(search_filter)
+
+        # Apply category filter
+        if category_filter != 'all':
+            try:
+                category_id = int(category_filter)
+                recent_query = recent_query.filter(Event.categories.any(EventCategory.id == category_id))
+                upcoming_query = upcoming_query.filter(Event.categories.any(EventCategory.id == category_id))
+            except (ValueError, TypeError):
+                pass
+
+        # Apply event type filter
+        if type_filter != 'all':
+            try:
+                type_id = int(type_filter)
+                recent_query = recent_query.filter_by(event_type_id=type_id)
+                upcoming_query = upcoming_query.filter_by(event_type_id=type_id)
+            except (ValueError, TypeError):
+                pass
+
+        # Apply date filter
+        if date_filter == 'upcoming':
+            recent_query = recent_query.filter(Event.start_datetime > now)
+        elif date_filter == 'past':
+            recent_query = recent_query.filter(Event.start_datetime < now)
+            upcoming_query = upcoming_query.filter(Event.start_datetime < now)
+        elif date_filter == 'this_month':
+            start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+            recent_query = recent_query.filter(Event.start_datetime >= start_of_month, Event.start_datetime <= end_of_month)
+            upcoming_query = upcoming_query.filter(Event.start_datetime >= start_of_month, Event.start_datetime <= end_of_month)
+        elif date_filter == 'last_month':
+            first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            first_of_last_month = (first_of_this_month - timedelta(days=1)).replace(day=1)
+            last_of_last_month = first_of_this_month - timedelta(seconds=1)
+            recent_query = recent_query.filter(Event.start_datetime >= first_of_last_month, Event.start_datetime <= last_of_last_month)
+            upcoming_query = upcoming_query.filter(Event.start_datetime >= first_of_last_month, Event.start_datetime <= last_of_last_month)
+
+        recent_events = recent_query.order_by(Event.created_at.desc()).limit(5).all()
+        upcoming_events_list = upcoming_query.order_by(Event.start_datetime.asc()).limit(5).all()
+
+        # Get filtered chart data
+        category_data = get_filtered_category_data(current_user.id, current_user.can_approve_events(), search_query, category_filter, type_filter, date_filter)
+        event_type_data = get_filtered_type_data(current_user.id, current_user.can_approve_events(), search_query, category_filter, type_filter, date_filter)
 
     except Exception as e:
         app.logger.error(f'Error calculating dashboard stats: {str(e)}')
@@ -661,7 +733,13 @@ def dashboard():
                          recent_events=recent_events,
                          upcoming_events_list=upcoming_events_list,
                          category_data=category_data,
-                         event_type_data=event_type_data)
+                         event_type_data=event_type_data,
+                         categories=categories,
+                         event_types=event_types,
+                         search_query=search_query,
+                         selected_category=category_filter,
+                         selected_type=type_filter,
+                         selected_date=date_filter)
 
 @app.route('/logout')
 @login_required
@@ -698,21 +776,58 @@ def events():
     # Search and filter parameters
     search_query = request.args.get('search', '').strip()
     status_filter = request.args.get('status', 'all')
+    category_filter = request.args.get('category', 'all')
+    type_filter = request.args.get('type', 'all')
+    date_filter = request.args.get('date', 'all')
     
     # Build query with filters
     try:
         if current_user.can_approve_events():
-            query = Event.query
+            query = Event.query.options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         else:
-            query = Event.query.filter_by(user_id=current_user.id)
+            query = Event.query.filter_by(user_id=current_user.id).options(
+                db.joinedload(Event.event_type),
+                db.joinedload(Event.categories)
+            )
         
-        # Apply search filter
+        # Apply search filter (search in name, description, and location)
         if search_query:
-            query = query.filter(Event.name.ilike(f'%{search_query}%'))
+            query = query.filter(
+                db.or_(
+                    Event.name.ilike(f'%{search_query}%'),
+                    Event.description.ilike(f'%{search_query}%'),
+                    Event.location.ilike(f'%{search_query}%')
+                )
+            )
         
         # Apply status filter
         if status_filter != 'all':
             query = query.filter_by(status=status_filter)
+            
+        # Apply category filter
+        if category_filter != 'all':
+            try:
+                category_id = int(category_filter)
+                query = query.filter(Event.categories.any(EventCategory.id == category_id))
+            except (ValueError, TypeError):
+                pass
+                
+        # Apply event type filter
+        if type_filter != 'all':
+            try:
+                type_id = int(type_filter)
+                query = query.filter_by(event_type_id=type_id)
+            except (ValueError, TypeError):
+                pass
+                
+        # Apply date filter
+        if date_filter == 'upcoming':
+            query = query.filter(Event.start_datetime > datetime.utcnow())
+        elif date_filter == 'past':
+            query = query.filter(Event.start_datetime < datetime.utcnow())
         
         # Paginate results
         events_pagination = query.order_by(Event.start_datetime.desc()).paginate(
@@ -731,7 +846,13 @@ def events():
                          theme_color=settings['theme_color'],
                          events=events, 
                          categories=categories,
-                         event_types=event_types)
+                         event_types=event_types,
+                         search_query=search_query,
+                         selected_status=status_filter,
+                         selected_category=category_filter,
+                         selected_type=type_filter,
+                         selected_date=date_filter,
+                         events_pagination=events_pagination)
 
 @app.route('/event_details/<int:event_id>')
 @login_required
@@ -1694,6 +1815,161 @@ def bulk_user_upload():
     return render_template('bulk_user_upload.html', 
                          app_name=app_name, theme_color=theme_color)
 
+def get_filtered_dashboard_stats(user_id, is_admin, search_query='', category_filter='all', type_filter='all', date_filter='all'):
+    """Get dashboard statistics with filters applied"""
+    from sqlalchemy import func
+    
+    now = datetime.now()
+    
+    # Build base query
+    if is_admin:
+        query = Event.query
+    else:
+        query = Event.query.filter_by(user_id=user_id)
+    
+    # Apply search filter
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Event.name.ilike(f'%{search_query}%'),
+                Event.description.ilike(f'%{search_query}%'),
+                Event.location.ilike(f'%{search_query}%')
+            )
+        )
+    
+    # Apply category filter
+    if category_filter != 'all':
+        try:
+            category_id = int(category_filter)
+            query = query.filter(Event.categories.any(EventCategory.id == category_id))
+        except (ValueError, TypeError):
+            pass
+    
+    # Apply event type filter
+    if type_filter != 'all':
+        try:
+            type_id = int(type_filter)
+            query = query.filter_by(event_type_id=type_id)
+        except (ValueError, TypeError):
+            pass
+    
+    # Apply date filter
+    if date_filter == 'upcoming':
+        query = query.filter(Event.start_datetime > now)
+    elif date_filter == 'past':
+        query = query.filter(Event.start_datetime < now)
+    elif date_filter == 'this_month':
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+        query = query.filter(Event.start_datetime >= start_of_month, Event.start_datetime <= end_of_month)
+    elif date_filter == 'last_month':
+        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_of_last_month = (first_of_this_month - timedelta(days=1)).replace(day=1)
+        last_of_last_month = first_of_this_month - timedelta(seconds=1)
+        query = query.filter(Event.start_datetime >= first_of_last_month, Event.start_datetime <= last_of_last_month)
+    
+    # Calculate statistics
+    total_events = query.count()
+    upcoming_events = query.filter(Event.start_datetime > now).count()
+    online_events = query.filter_by(is_online=True).count()
+    offline_events = query.filter_by(is_online=False).count()
+    pending_events = query.filter_by(status='pending').count() if is_admin else 0
+    
+    return {
+        'total_events': total_events,
+        'upcoming_events': upcoming_events,
+        'online_events': online_events,
+        'offline_events': offline_events,
+        'pending_events': pending_events
+    }
+
+def get_filtered_category_data(user_id, is_admin, search_query='', category_filter='all', type_filter='all', date_filter='all'):
+    """Get filtered category data for charts"""
+    from sqlalchemy import func
+    
+    # Build base query
+    if is_admin:
+        query = db.session.query(EventCategory.name, func.count(Event.id).label('count')).join(
+            event_categories, EventCategory.id == event_categories.c.category_id
+        ).join(Event, Event.id == event_categories.c.event_id)
+    else:
+        query = db.session.query(EventCategory.name, func.count(Event.id).label('count')).join(
+            event_categories, EventCategory.id == event_categories.c.category_id
+        ).join(Event, Event.id == event_categories.c.event_id).filter(Event.user_id == user_id)
+    
+    # Apply filters (similar logic as dashboard stats)
+    query = apply_chart_filters(query, search_query, category_filter, type_filter, date_filter)
+    
+    results = query.group_by(EventCategory.id, EventCategory.name).all()
+    return [{'name': name, 'count': count} for name, count in results]
+
+def get_filtered_type_data(user_id, is_admin, search_query='', category_filter='all', type_filter='all', date_filter='all'):
+    """Get filtered event type data for charts"""
+    from sqlalchemy import func
+    
+    # Build base query
+    if is_admin:
+        query = db.session.query(EventType.name, func.count(Event.id).label('count')).join(
+            Event, Event.event_type_id == EventType.id
+        )
+    else:
+        query = db.session.query(EventType.name, func.count(Event.id).label('count')).join(
+            Event, Event.event_type_id == EventType.id
+        ).filter(Event.user_id == user_id)
+    
+    # Apply filters
+    query = apply_chart_filters(query, search_query, category_filter, type_filter, date_filter)
+    
+    results = query.group_by(EventType.id, EventType.name).all()
+    return [{'name': name, 'count': count} for name, count in results]
+
+def apply_chart_filters(query, search_query='', category_filter='all', type_filter='all', date_filter='all'):
+    """Apply common filters to chart queries"""
+    now = datetime.now()
+    
+    # Apply search filter
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Event.name.ilike(f'%{search_query}%'),
+                Event.description.ilike(f'%{search_query}%'),
+                Event.location.ilike(f'%{search_query}%')
+            )
+        )
+    
+    # Apply category filter
+    if category_filter != 'all':
+        try:
+            category_id = int(category_filter)
+            query = query.filter(Event.categories.any(EventCategory.id == category_id))
+        except (ValueError, TypeError):
+            pass
+    
+    # Apply event type filter
+    if type_filter != 'all':
+        try:
+            type_id = int(type_filter)
+            query = query.filter(Event.event_type_id == type_id)
+        except (ValueError, TypeError):
+            pass
+    
+    # Apply date filter
+    if date_filter == 'upcoming':
+        query = query.filter(Event.start_datetime > now)
+    elif date_filter == 'past':
+        query = query.filter(Event.start_datetime < now)
+    elif date_filter == 'this_month':
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+        query = query.filter(Event.start_datetime >= start_of_month, Event.start_datetime <= end_of_month)
+    elif date_filter == 'last_month':
+        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_of_last_month = (first_of_this_month - timedelta(days=1)).replace(day=1)
+        last_of_last_month = first_of_this_month - timedelta(seconds=1)
+        query = query.filter(Event.start_datetime >= first_of_last_month, Event.start_datetime <= last_of_last_month)
+    
+    return query
+
 @app.route('/api/dashboard/stats')
 @login_required
 def api_dashboard_stats():
@@ -2056,41 +2332,115 @@ def api_remove_logo():
 @login_required
 def api_add_category():
     from flask import jsonify, request
-    category_name = request.form.get('category_name', '').strip()
-    if not category_name:
-        return jsonify({'error': 'Category name is required'}), 400
+    try:
+        category_name = request.form.get('category_name', '').strip()
+        if not category_name:
+            return jsonify({'error': 'Category name is required'}), 400
 
-    # For now, return the actual name that was submitted
-    # In a real app, you'd save this to database
-    flash(f'Category "{category_name}" added successfully', 'success')
-    return jsonify({'success': True, 'id': 1, 'name': category_name})
+        # Check if category already exists
+        existing_category = EventCategory.query.filter_by(name=category_name).first()
+        if existing_category:
+            return jsonify({'error': 'Category already exists'}), 400
+
+        # Create new category
+        new_category = EventCategory(name=category_name)
+        db.session.add(new_category)
+        db.session.commit()
+        
+        # Invalidate caches
+        invalidate_dashboard_caches()
+        
+        app.logger.info(f'Category "{category_name}" added by user {current_user.id}')
+        return jsonify({'success': True, 'id': new_category.id, 'name': new_category.name})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error adding category: {str(e)}')
+        return jsonify({'error': 'Database error occurred'}), 500
 
 @app.route('/api/categories/<int:category_id>', methods=['DELETE'])
 @login_required
 def api_delete_category(category_id):
     from flask import jsonify
-    flash('Category deleted successfully', 'success')
-    return jsonify({'success': True})
+    try:
+        category = EventCategory.query.get_or_404(category_id)
+        
+        # Check if category is used by any events
+        events_using_category = Event.query.filter(Event.categories.contains(category)).count()
+        if events_using_category > 0:
+            return jsonify({'error': f'Cannot delete category. It is used by {events_using_category} event(s).'}), 400
+        
+        category_name = category.name
+        db.session.delete(category)
+        db.session.commit()
+        
+        # Invalidate caches
+        invalidate_dashboard_caches()
+        
+        app.logger.info(f'Category "{category_name}" deleted by user {current_user.id}')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error deleting category {category_id}: {str(e)}')
+        return jsonify({'error': 'Database error occurred'}), 500
 
 @app.route('/api/event-types', methods=['POST'])
 @login_required
 def api_add_event_type():
     from flask import jsonify, request
-    type_name = request.form.get('type_name', '').strip()
-    if not type_name:
-        return jsonify({'error': 'Event type name is required'}), 400
+    try:
+        type_name = request.form.get('type_name', '').strip()
+        if not type_name:
+            return jsonify({'error': 'Event type name is required'}), 400
 
-    # For now, return the actual name that was submitted
-    # In a real app, you'd save this to database
-    flash(f'Event type "{type_name}" added successfully', 'success')
-    return jsonify({'success': True, 'id': 1, 'name': type_name})
+        # Check if event type already exists
+        existing_type = EventType.query.filter_by(name=type_name).first()
+        if existing_type:
+            return jsonify({'error': 'Event type already exists'}), 400
+
+        # Create new event type
+        new_event_type = EventType(name=type_name)
+        db.session.add(new_event_type)
+        db.session.commit()
+        
+        # Invalidate caches
+        invalidate_dashboard_caches()
+        
+        app.logger.info(f'Event type "{type_name}" added by user {current_user.id}')
+        return jsonify({'success': True, 'id': new_event_type.id, 'name': new_event_type.name})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error adding event type: {str(e)}')
+        return jsonify({'error': 'Database error occurred'}), 500
 
 @app.route('/api/event-types/<int:type_id>', methods=['DELETE'])
 @login_required
 def api_delete_event_type(type_id):
     from flask import jsonify
-    flash('Event type deleted successfully', 'success')
-    return jsonify({'success': True})
+    try:
+        event_type = EventType.query.get_or_404(type_id)
+        
+        # Check if event type is used by any events
+        events_using_type = Event.query.filter_by(event_type_id=type_id).count()
+        if events_using_type > 0:
+            return jsonify({'error': f'Cannot delete event type. It is used by {events_using_type} event(s).'}), 400
+        
+        type_name = event_type.name
+        db.session.delete(event_type)
+        db.session.commit()
+        
+        # Invalidate caches
+        invalidate_dashboard_caches()
+        
+        app.logger.info(f'Event type "{type_name}" deleted by user {current_user.id}')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Error deleting event type {type_id}: {str(e)}')
+        return jsonify({'error': 'Database error occurred'}), 500
 
 @app.route('/api/users', methods=['POST'])
 @login_required
@@ -2367,7 +2717,138 @@ with app.app_context():
             db.session.add(event_type)
 
     db.session.commit()
+
+# Database Backup and Restore API Routes
+@app.route('/api/database/backup', methods=['POST'])
+@login_required
+@limiter.limit("5 per hour")
+def api_database_backup():
+    """Create a database backup and download it"""
+    from flask import jsonify, make_response
+    import subprocess
+    import tempfile
+    import os
+    from datetime import datetime
     
+    try:
+        # Only admin users can perform database backup
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Only administrators can create database backups'}), 403
+        
+        # Get database URL from environment
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return jsonify({'error': 'Database URL not configured'}), 500
+        
+        # Create temporary file for backup
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f"database_backup_{timestamp}.sql"
+        
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False, suffix='.sql') as temp_file:
+            try:
+                # Use pg_dump to create database backup
+                cmd = ['pg_dump', database_url, '--no-owner', '--no-privileges']
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    app.logger.error(f'pg_dump failed: {result.stderr}')
+                    return jsonify({'error': 'Failed to create database backup'}), 500
+                
+                # Write backup to temporary file
+                temp_file.write(result.stdout.encode('utf-8'))
+                temp_file.flush()
+                
+                # Read the backup content
+                temp_file.seek(0)
+                backup_content = temp_file.read()
+                
+                # Create response with file download
+                response = make_response(backup_content)
+                response.headers['Content-Type'] = 'application/octet-stream'
+                response.headers['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
+                
+                # Log the backup creation
+                log_security_event("DATABASE_BACKUP_CREATED", f"Database backup created: {backup_filename}", user_id=current_user.id)
+                app.logger.info(f'Database backup created successfully by user {current_user.id}')
+                
+                return response
+                
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file.name)
+                except:
+                    pass
+                    
+    except Exception as e:
+        app.logger.error(f'Error creating database backup: {str(e)}')
+        return jsonify({'error': 'Internal server error occurred during backup'}), 500
+
+@app.route('/api/database/restore', methods=['POST'])
+@login_required
+@limiter.limit("2 per hour")
+def api_database_restore():
+    """Restore database from uploaded backup file"""
+    from flask import jsonify, request
+    import subprocess
+    import tempfile
+    import os
+    
+    try:
+        # Only admin users can perform database restore
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Only administrators can restore database backups'}), 403
+        
+        # Check if backup file was uploaded
+        if 'backup_file' not in request.files:
+            return jsonify({'error': 'No backup file provided'}), 400
+        
+        backup_file = request.files['backup_file']
+        if backup_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Validate file extension
+        if not backup_file.filename.endswith('.sql'):
+            return jsonify({'error': 'Invalid file type. Only .sql files are allowed'}), 400
+        
+        # Get database URL from environment
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return jsonify({'error': 'Database URL not configured'}), 500
+        
+        # Save uploaded file to temporary location
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False, suffix='.sql') as temp_file:
+            backup_file.save(temp_file.name)
+            
+            try:
+                # Use psql to restore database
+                cmd = ['psql', database_url, '-f', temp_file.name]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    app.logger.error(f'Database restore failed: {result.stderr}')
+                    return jsonify({'error': 'Failed to restore database backup'}), 500
+                
+                # Log the restore operation
+                log_security_event("DATABASE_RESTORE_COMPLETED", f"Database restored from {backup_file.filename}", user_id=current_user.id)
+                app.logger.info(f'Database restored successfully by user {current_user.id} from file {backup_file.filename}')
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Database restored successfully'
+                })
+                
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file.name)
+                except:
+                    pass
+                    
+    except Exception as e:
+        app.logger.error(f'Error restoring database: {str(e)}')
+        return jsonify({'error': 'Internal server error occurred during restore'}), 500
+
     # Log application startup
     log_security_event("APPLICATION_START", "Application started successfully")
     app.logger.info("Database initialization completed with security enhancements")

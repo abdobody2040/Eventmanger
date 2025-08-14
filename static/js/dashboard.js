@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Load dashboard statistics
         loadDashboardStats();
+        
+        // Initialize dashboard filters
+        initDashboardFilters();
     }
     
     initDashboard();
@@ -500,4 +503,77 @@ function generateColors(count) {
     }
     
     return colors.slice(0, count);
+}
+
+// Dashboard Filter Functionality
+function initDashboardFilters() {
+    // Initialize search input
+    const searchInput = document.getElementById('dashboard_search');
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                applyDashboardFilters();
+            }
+        });
+        
+        // Add real-time search with debounce
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyDashboardFilters, 500);
+        });
+    }
+    
+    // Initialize filter change events
+    const filterControls = document.querySelectorAll('.dashboard-filter');
+    filterControls.forEach(control => {
+        control.addEventListener('change', function() {
+            applyDashboardFilters();
+        });
+    });
+}
+
+// Apply dashboard filters and refresh data
+function applyDashboardFilters() {
+    const searchInput = document.getElementById('dashboard_search');
+    const categorySelect = document.getElementById('category_filter');
+    const typeSelect = document.getElementById('type_filter');
+    const dateSelect = document.getElementById('date_filter');
+    
+    // Build query string
+    const params = new URLSearchParams();
+    
+    if (searchInput && searchInput.value.trim()) {
+        params.append('search', searchInput.value.trim());
+    }
+    
+    if (categorySelect && categorySelect.value !== 'all') {
+        params.append('category', categorySelect.value);
+    }
+    
+    if (typeSelect && typeSelect.value !== 'all') {
+        params.append('type', typeSelect.value);
+    }
+    
+    if (dateSelect && dateSelect.value !== 'all') {
+        params.append('date', dateSelect.value);
+    }
+    
+    // Redirect with filters to reload the dashboard
+    window.location.href = `/dashboard?${params.toString()}`;
+}
+
+// Function to clear all dashboard filters
+function clearDashboardFilters() {
+    // Reset all filter controls
+    const searchInput = document.getElementById('dashboard_search');
+    if (searchInput) searchInput.value = '';
+    
+    const filterSelects = document.querySelectorAll('.dashboard-filter');
+    filterSelects.forEach(select => {
+        select.value = 'all';
+    });
+    
+    // Redirect to dashboard page without params
+    window.location.href = '/dashboard';
 }

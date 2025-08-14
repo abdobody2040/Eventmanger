@@ -108,37 +108,40 @@
                     <div class="col-md-4">
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search events, locations, requesters...">
+                            <input type="text" class="form-control" id="dashboard_search" placeholder="Search events, locations, requesters..." value="{{ search_query or '' }}">
                         </div>
                     </div>
                     <div class="col-md-8">
                         <div class="row">
-                            <div class="col-md-4">
-                                <select class="form-select">
+                            <div class="col-md-3">
+                                <select class="form-select dashboard-filter" id="category_filter">
                                     <option value="all">All Categories</option>
-                                    {% for category in category_data %}
-                                        <option value="{{ category.name }}">{{ category.name }}</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category.id }}" {% if selected_category == category.id|string %}selected{% endif %}>{{ category.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <select class="form-select">
+                            <div class="col-md-3">
+                                <select class="form-select dashboard-filter" id="type_filter">
                                     <option value="all">All Types</option>
-                                    <option value="conference">Conference</option>
-                                    <option value="webinar">Webinar</option>
-                                    <option value="workshop">Workshop</option>
-                                    <option value="symposium">Symposium</option>
-                                    <option value="meeting">Meeting</option>
+                                    {% for type in event_types %}
+                                        <option value="{{ type.id }}" {% if selected_type == type.id|string %}selected{% endif %}>{{ type.name }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <select class="form-select">
-                                    <option value="all">All Dates</option>
-                                    <option value="upcoming">Upcoming</option>
-                                    <option value="past">Past</option>
-                                    <option value="this_month">This Month</option>
-                                    <option value="last_month">Last Month</option>
+                            <div class="col-md-3">
+                                <select class="form-select dashboard-filter" id="date_filter">
+                                    <option value="all" {% if selected_date == 'all' %}selected{% endif %}>All Dates</option>
+                                    <option value="upcoming" {% if selected_date == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                                    <option value="past" {% if selected_date == 'past' %}selected{% endif %}>Past</option>
+                                    <option value="this_month" {% if selected_date == 'this_month' %}selected{% endif %}>This Month</option>
+                                    <option value="last_month" {% if selected_date == 'last_month' %}selected{% endif %}>Last Month</option>
                                 </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="clearDashboardFilters()">
+                                    <i class="fas fa-times me-1"></i>Clear
+                                </button>
                             </div>
                         </div>
                     </div>

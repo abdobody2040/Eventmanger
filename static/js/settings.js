@@ -245,6 +245,93 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Event Type management
+    const addEventTypeForm = document.getElementById('add_type_form');
+    if (addEventTypeForm) {
+        addEventTypeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const typeName = document.getElementById('type_name').value;
+
+            const formData = new FormData();
+            formData.append('type_name', typeName);
+
+            fetch('/api/event-types', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Event type added successfully!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(data.error || 'Error adding event type', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error adding event type', 'danger');
+            });
+        });
+    }
+
+    // Delete category buttons
+    const deleteCategoryBtns = document.querySelectorAll('.btn-delete-category');
+    deleteCategoryBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const categoryId = this.getAttribute('data-id');
+            const categoryName = this.getAttribute('data-name');
+            if (confirm(`Are you sure you want to delete category "${categoryName}"?`)) {
+                fetch(`/api/categories/${categoryId}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Category deleted successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(data.error || 'Error deleting category', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error deleting category', 'danger');
+                });
+            }
+        });
+    });
+
+    // Delete event type buttons
+    const deleteEventTypeBtns = document.querySelectorAll('.btn-delete-type');
+    deleteEventTypeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const typeId = this.getAttribute('data-id');
+            const typeName = this.getAttribute('data-name');
+            if (confirm(`Are you sure you want to delete event type "${typeName}"?`)) {
+                fetch(`/api/event-types/${typeId}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Event type deleted successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showAlert(data.error || 'Error deleting event type', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error deleting event type', 'danger');
+                });
+            }
+        });
+    });
+
     // User management
     const addUserForm = document.getElementById('add_user_form');
     if (addUserForm) {
@@ -436,4 +523,113 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     };
+
+    // Database backup functionality
+    const backupButton = document.getElementById('backup_database');
+    if (backupButton) {
+        backupButton.addEventListener('click', function() {
+            const button = this;
+            const originalText = button.innerHTML;
+            
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Creating Backup...';
+            
+            fetch('/api/database/backup', {
+                method: 'POST',
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Get the filename from the response headers or use a default
+                    const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'database_backup.sql';
+                    return response.blob().then(blob => ({ blob, filename }));
+                } else {
+                    return response.json().then(data => Promise.reject(data));
+                }
+            })
+            .then(({ blob, filename }) => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showAlert('Database backup downloaded successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert(error.error || 'Error creating database backup', 'danger');
+            })
+            .finally(() => {
+                // Restore button state
+                button.disabled = false;
+                button.innerHTML = originalText;
+            });
+        });
+    }
+
+    // Database restore functionality
+    const restoreButton = document.getElementById('restore_database');
+    if (restoreButton) {
+        restoreButton.addEventListener('click', function() {
+            const fileInput = document.getElementById('restore_file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showAlert('Please select a backup file first', 'warning');
+                return;
+            }
+            
+            // Validate file type
+            if (!file.name.endsWith('.sql')) {
+                showAlert('Please select a valid SQL backup file', 'danger');
+                return;
+            }
+            
+            // Confirm the destructive action
+            if (!confirm('This will permanently replace ALL current data with the backup. Are you absolutely sure you want to continue?')) {
+                return;
+            }
+            
+            const button = this;
+            const originalText = button.innerHTML;
+            
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Restoring...';
+            
+            const formData = new FormData();
+            formData.append('backup_file', file);
+            
+            fetch('/api/database/restore', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Database restored successfully! The page will refresh...', 'success');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert(data.error || 'Error restoring database', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Error restoring database', 'danger');
+            })
+            .finally(() => {
+                // Restore button state
+                button.disabled = false;
+                button.innerHTML = originalText;
+                fileInput.value = ''; // Clear the file input
+            });
+        });
+    }
 });
