@@ -3,3 +3,6 @@
 2025-08-13 23:27:34,921 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.83.9.33 [in /home/runner/workspace/app.py:221]
 2025-08-14 00:10:23,448 INFO: DATABASE_BACKUP_CREATED - Database backup created: database_backup_20250814_001016.sql - User ID: 1 - IP: 10.83.4.97 [in /home/runner/workspace/app.py:221]
 2025-08-14 12:54:54,109 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.83.2.4 [in /home/runner/workspace/app.py:221]
+2025-08-14 13:36:22,032 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.83.6.21 [in /home/runner/workspace/app.py:221]
+2025-08-14 15:17:39,235 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.83.8.248 [in /home/runner/workspace/app.py:222]
+2025-08-14 15:20:28,086 INFO: FILE_UPLOAD_FAILED - Missing attendees file - User ID: 1 - IP: 10.83.5.4 [in /home/runner/workspace/app.py:222]

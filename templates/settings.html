@@ -58,7 +58,7 @@
                         <label for="color_picker" class="form-label">Custom Color Picker</label>
                         <div class="d-flex align-items-center gap-3">
                             <input type="color" class="form-control form-control-color" id="color_picker" value="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}" title="Choose your color">
-                            <div class="color-preview" id="color_preview" style="width: 50px; height: 50px; border: 2px solid #ddd; border-radius: 8px; background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }};"></div>
+                            <div class="color-preview" id="color_preview" style="width: 50px; height: 50px; border: 2px solid #ddd; border-radius: 8px;" data-color="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}"></div>
                             <button type="button" class="btn btn-primary" id="apply_custom_color">Apply Color</button>
                         </div>
                         <small class="text-muted">Pick any color from the color wheel</small>
@@ -204,7 +204,7 @@
                     </div>
 
                     <!-- Current Color Display -->
-                    <div class="current-theme-display p-3 border rounded" style="background-color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}; color: white;">
+                    <div class="current-theme-display p-3 border rounded" data-bg-color="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}" style="color: white;">
                         <strong>Current Theme Color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}</strong>
                     </div>
                 </div>

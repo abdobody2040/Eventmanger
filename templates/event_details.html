@@ -99,8 +99,7 @@
         <div class="col-md-4">
             {% if event.image_file %}
             <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" alt="{{ event.name }}" class="event-image">
-            {% elif event.image_url %}
-            <img src="{{ event.image_url }}" alt="{{ event.name }}" class="event-image">
+
             {% else %}
             <div class="d-flex align-items-center justify-content-center event-image bg-light">
                 <i class="fas fa-calendar-alt text-muted fa-4x"></i>
@@ -139,12 +138,7 @@
                         {% if event.is_online %}
                             Online Event
                         {% else %}
-                            {% if event.venue_details %}
-                                {{ event.venue_details.name }}<br>
-                                {{ event.governorate }}
-                            {% else %}
-                                {{ event.governorate }}
-                            {% endif %}
+                            {{ event.governorate or 'Venue Location' }}
                         {% endif %}
                     </span>
                 </div>

@@ -18,6 +18,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.utils import secure_filename
 import pandas as pd
 import logging
 from logging.handlers import RotatingFileHandler
@@ -269,6 +270,20 @@ def check_request_size():
             log_security_event("LARGE_REQUEST_BLOCKED", f"Request size {request.content_length} exceeds limit")
             abort(413)
 
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    """Handle all unexpected errors"""
+    db.session.rollback()
+    app.logger.error(f'Unexpected error: {error}')
+    
+    # Return JSON for API requests
+    if request.path.startswith('/api/'):
+        from flask import jsonify
+        return jsonify({'error': 'An unexpected error occurred'}), 500
+    
+    flash('An unexpected error occurred. Please try again.', 'danger')
+    return redirect(url_for('dashboard'))
+
 # Event Category model
 class EventCategory(db.Model):
     __tablename__ = 'event_category'
@@ -328,6 +343,9 @@ class Event(db.Model):
     venue_id = db.Column(db.Integer, nullable=True)  # Could be linked to venue table later
 
     governorate = db.Column(db.String(100))
+    venue_name = db.Column(db.String(200), nullable=True)  # Venue name for offline events
+    employee_code = db.Column(db.String(50), nullable=True)  # Employee code (required field)
+    service_request_id = db.Column(db.String(100), nullable=True)  # Service request ID (required field)
     image_file = db.Column(db.String(200), nullable=True)  # For storing event image filename
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, active, declined
@@ -514,17 +532,34 @@ def close_db_session(exception=None):
         if exception:
             db.session.rollback()
         else:
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
+            try:
+                db.session.commit()
+            except Exception as commit_error:
+                app.logger.error(f'Error committing session: {commit_error}')
+                db.session.rollback()
+    except Exception as e:
+        app.logger.error(f'Error in teardown: {e}')
+        try:
+            db.session.rollback()
+        except:
+            pass
     finally:
-        db.session.remove()
+        try:
+            db.session.remove()
+        except Exception as e:
+            app.logger.error(f'Error removing session: {e}')
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle internal server errors"""
     db.session.rollback()
     app.logger.error(f'Internal server error: {error}')
+    
+    # Return JSON for API requests
+    if request.path.startswith('/api/'):
+        from flask import jsonify
+        return jsonify({'error': 'Internal server error'}), 500
+    
     flash('An internal error occurred. Please try again.', 'danger')
     return redirect(url_for('dashboard'))
 
@@ -532,6 +567,12 @@ def internal_error(error):
 def not_found_error(error):
     """Handle 404 errors"""
     app.logger.warning(f'404 error: {error}')
+    
+    # Return JSON for API requests
+    if request.path.startswith('/api/'):
+        from flask import jsonify
+        return jsonify({'error': 'Not found'}), 404
+    
     flash('The requested page was not found.', 'warning')
     return redirect(url_for('dashboard'))
 
@@ -1165,6 +1206,9 @@ def create_event():
                 end_datetime=end_datetime,
                 registration_deadline=registration_deadline,
                 venue_id=None,  # We'll implement venue handling later
+                venue_name=venue,  # Store venue name
+                employee_code=employee_code,  # Store employee code
+                service_request_id=service_request,  # Store service request ID
                 image_file=image_filename,  # Add image filename to event
                 governorate=governorate,
                 user_id=current_user.id,
@@ -1304,6 +1348,13 @@ def edit_event(event_id):
             event.is_online = is_online
             if governorate:
                 event.governorate = governorate
+            
+            # Update venue name for offline events
+            venue_name = request.form.get('venue', '').strip()
+            if venue_name and not is_online:
+                event.venue_name = venue_name
+            elif is_online:
+                event.venue_name = None
 
             # Update datetime fields with validation
             try:
@@ -2951,6 +3002,26 @@ def api_database_restore():
     except Exception as e:
         app.logger.error(f'Error restoring database: {str(e)}')
         return jsonify({'error': 'Internal server error occurred during restore'}), 500
+
+    # Health check endpoint
+    @app.route('/api/health')
+    def health_check():
+        from flask import jsonify
+        try:
+            # Test database connection
+            db.session.execute(db.text('SELECT 1'))
+            return jsonify({
+                'status': 'healthy',
+                'database': 'connected',
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as e:
+            return jsonify({
+                'status': 'unhealthy',
+                'database': 'disconnected',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }), 500
 
     # Log application startup
     log_security_event("APPLICATION_START", "Application started successfully")

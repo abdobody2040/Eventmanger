@@ -241,10 +241,10 @@
                 <!-- Venue -->
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="venue_name" class="form-label required-field">Venue Name</label>
+                        <label for="venue" class="form-label">Venue Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="venue" name="venue" 
                                placeholder="Enter venue name" required
-                               value="{{ event.venue.name if event and event.venue else '' }}">
+                               value="{{ event.venue_name if event else '' }}">
                         <div class="invalid-feedback">Please enter a venue name</div>
                         <small class="form-text text-muted">Enter the name of the venue</small>
                     </div>
@@ -260,10 +260,10 @@
                 <!-- Service Request -->
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="service_request" class="form-label required-field">Service Request ID</label>
+                        <label for="service_request" class="form-label">Service Request ID <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="service_request" name="service_request" 
                                placeholder="Enter service request ID" required
-                               value="{{ event.service_request.name if event and event.service_request else '' }}">
+                               value="{{ event.service_request_id if event else '' }}">
                         <div class="invalid-feedback">Please enter a service request ID</div>
                     </div>
                 </div>
@@ -271,10 +271,10 @@
                 <!-- Employee Code -->
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="employee_code" class="form-label required-field">Employee Code</label>
+                        <label for="employee_code" class="form-label">Employee Code <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="employee_code" name="employee_code" 
                                placeholder="Enter employee code" required
-                               value="{{ event.employee.code if event and event.employee else '' }}">
+                               value="{{ event.employee_code if event else '' }}">
                         <div class="invalid-feedback">Please enter an employee code</div>
                     </div>
                 </div>

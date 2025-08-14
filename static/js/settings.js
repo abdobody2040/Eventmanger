@@ -1,4 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize color preview and theme display
+    const colorPreview = document.getElementById('color_preview');
+    const themeDisplay = document.querySelector('.current-theme-display');
+
+    if (colorPreview) {
+        const currentColor = colorPreview.getAttribute('data-color');
+        colorPreview.style.backgroundColor = currentColor;
+    }
+
+    if (themeDisplay) {
+        const currentColor = themeDisplay.getAttribute('data-bg-color');
+        themeDisplay.style.backgroundColor = currentColor;
+    }
+
     // Utility function to show alerts
     function showAlert(message, type = 'info') {
         const alertsContainer = document.querySelector('.container-fluid');
@@ -19,12 +33,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Theme color picker
-    const themeColorInput = document.getElementById('theme_color');
+    const themeColorInput = document.getElementById('color_picker');
     const presetColors = document.querySelectorAll('.preset-color');
+    const applyColorBtn = document.getElementById('apply_custom_color');
 
     if (themeColorInput) {
         themeColorInput.addEventListener('change', function() {
-            updateThemeColor(this.value);
+            if (colorPreview) {
+                colorPreview.style.backgroundColor = this.value;
+            }
+        });
+    }
+
+    if (applyColorBtn) {
+        applyColorBtn.addEventListener('click', function() {
+            if (themeColorInput) {
+                updateThemeColor(themeColorInput.value);
+            }
         });
     }
 
@@ -49,7 +74,16 @@ document.addEventListener('DOMContentLoaded', function() {
             credentials: 'same-origin',
             body: JSON.stringify({ theme_color: color })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Response is not JSON');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // Apply theme immediately
@@ -62,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error updating theme color:', error);
-            showAlert('Error updating theme color', 'danger');
+            showAlert('Error updating theme color. Please refresh the page and try again.', 'danger');
         });
     }
 
@@ -86,7 +120,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: JSON.stringify({ name: appName })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('App name updated successfully! Refreshing page...', 'success');
@@ -135,7 +178,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('Logo updated successfully! Refreshing page...', 'success');
@@ -160,7 +212,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'DELETE',
                     credentials: 'same-origin'
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showAlert('Logo removed successfully! Refreshing page...', 'success');
@@ -199,7 +260,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: JSON.stringify(loginContentData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('Login content updated successfully!', 'success');
@@ -229,7 +299,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('Category added successfully!', 'success');
@@ -260,7 +339,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('Event type added successfully!', 'success');
@@ -287,7 +375,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'DELETE',
                     credentials: 'same-origin'
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showAlert('Category deleted successfully!', 'success');
@@ -315,7 +412,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'DELETE',
                     credentials: 'same-origin'
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showAlert('Event type deleted successfully!', 'success');
@@ -352,7 +458,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('User added successfully!', 'success');
@@ -378,7 +493,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'DELETE',
                     credentials: 'same-origin'
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showAlert('User deleted successfully!', 'success');
@@ -401,12 +525,12 @@ document.addEventListener('DOMContentLoaded', function() {
         createTokenForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const tokenName = document.getElementById('token_name').value.trim();
-            
+
             if (!tokenName) {
                 showAlert('Please enter a token name', 'warning');
                 return;
             }
-            
+
             fetch('/api/tokens', {
                 method: 'POST',
                 headers: {
@@ -415,7 +539,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin',
                 body: JSON.stringify({ name: tokenName })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     document.getElementById('new_token_value').value = data.token;
@@ -441,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!tokensList) {
             return; // Exit early if tokens section doesn't exist
         }
-        
+
         fetch('/api/tokens', {
             method: 'GET',
             credentials: 'same-origin'
@@ -450,6 +583,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Response is not JSON');
+            }
             return response.json();
         })
         .then(data => {
@@ -457,11 +594,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.tokens && data.tokens.length > 0) {
                 let html = '<div class="table-responsive"><table class="table table-sm">';
                 html += '<thead><tr><th>Name</th><th>Created</th><th>Last Used</th><th>Actions</th></tr></thead><tbody>';
-                
+
                 data.tokens.forEach(token => {
                     const createdDate = new Date(token.created_at).toLocaleDateString();
                     const lastUsed = token.last_used ? new Date(token.last_used).toLocaleDateString() : 'Never';
-                    
+
                     html += `<tr>
                         <td>${token.name}</td>
                         <td>${createdDate}</td>
@@ -471,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                     </tr>`;
                 });
-                
+
                 html += '</tbody></table></div>';
                 tokensList.innerHTML = html;
             } else {
@@ -508,7 +645,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'DELETE',
                 credentials: 'same-origin'
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('Token deleted successfully!', 'success');
@@ -530,11 +676,11 @@ document.addEventListener('DOMContentLoaded', function() {
         backupButton.addEventListener('click', function() {
             const button = this;
             const originalText = button.innerHTML;
-            
+
             // Show loading state
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Creating Backup...';
-            
+
             fetch('/api/database/backup', {
                 method: 'POST',
                 credentials: 'same-origin'
@@ -558,7 +704,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                
+
                 showAlert('Database backup downloaded successfully!', 'success');
             })
             .catch(error => {
@@ -579,39 +725,48 @@ document.addEventListener('DOMContentLoaded', function() {
         restoreButton.addEventListener('click', function() {
             const fileInput = document.getElementById('restore_file');
             const file = fileInput.files[0];
-            
+
             if (!file) {
                 showAlert('Please select a backup file first', 'warning');
                 return;
             }
-            
+
             // Validate file type
             if (!file.name.endsWith('.sql')) {
                 showAlert('Please select a valid SQL backup file', 'danger');
                 return;
             }
-            
+
             // Confirm the destructive action
             if (!confirm('This will permanently replace ALL current data with the backup. Are you absolutely sure you want to continue?')) {
                 return;
             }
-            
+
             const button = this;
             const originalText = button.innerHTML;
-            
+
             // Show loading state
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Restoring...';
-            
+
             const formData = new FormData();
             formData.append('backup_file', file);
-            
+
             fetch('/api/database/restore', {
                 method: 'POST',
                 credentials: 'same-origin',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showAlert('Database restored successfully! The page will refresh...', 'success');
