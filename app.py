@@ -1561,6 +1561,10 @@ def export_events():
     # Convert to plain dictionaries to avoid session issues
     events_data = []
     for event in events_query:
+        # Extract creator name from email (everything before @)
+        creator_email = event.creator.email if event.creator else ''
+        creator_name = creator_email.split('@')[0].replace('.', ' ').title() if creator_email else 'Unknown'
+        
         event_dict = {
             'id': event.id,
             'name': event.name,
@@ -1571,7 +1575,8 @@ def export_events():
             'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else '',
             'governorate': event.governorate or '',
             'categories': ', '.join([category.name for category in event.categories]) if event.categories else 'None',
-            'creator_email': event.creator.email if event.creator else '',
+            'creator_name': creator_name,
+            'creator_email': creator_email,
             'created_at': event.created_at.strftime('%Y-%m-%d %H:%M') if event.created_at else '',
             'status': event.status or 'Active'
         }
@@ -1583,7 +1588,7 @@ def export_events():
         fieldnames = [
             'ID', 'Event Name', 'Description', 'Event Type', 'Is Online', 
             'Start Date', 'End Date', 'Governorate', 'Categories', 
-            'Created By', 'Created At', 'Status'
+            'Creator Name', 'Creator Email', 'Created At', 'Status'
         ]
         
         writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -1610,7 +1615,8 @@ def export_events():
                     'End Date': event_data['end_datetime'],
                     'Governorate': event_data['governorate'],
                     'Categories': event_data['categories'],
-                    'Created By': event_data['creator_email'],
+                    'Creator Name': event_data['creator_name'],
+                    'Creator Email': event_data['creator_email'],
                     'Created At': event_data['created_at'],
                     'Status': event_data['status']
                 })
