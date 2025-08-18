@@ -71,3 +71,11 @@ openpyxl
 pandas
 pillow
 python-dotenv
+flask-caching
+flask-limiter
+flask-wtf
+numpy
+openpyxl
+pandas
+pillow
+python-dotenv
