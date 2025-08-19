@@ -9,3 +9,4 @@
 2025-08-18 20:25:34,843 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.82.4.24 [in /home/runner/workspace/app.py:222]
 2025-08-18 20:27:53,497 INFO: DATABASE_BACKUP_CREATED - Database backup created: database_backup_20250818_202752.sql - User ID: 1 - IP: 10.82.4.24 [in /home/runner/workspace/app.py:222]
 2025-08-18 20:57:57,376 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.82.5.22 [in /home/runner/workspace/app.py:222]
+2025-08-18 20:59:30,020 INFO: LOGIN_SUCCESS - User admin@pharmaevents.com logged in successfully - User ID: 1 - IP: 10.82.2.3 [in /home/runner/workspace/app.py:222]
