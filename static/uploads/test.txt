@@ -1,0 +1,13 @@
+>> Data types
+>> Data Transformations
+
+>> if, else
+>> loops
+
+
+>> Classes
+
+>> DB
+>> APIs
+
+>> Spark Overview
