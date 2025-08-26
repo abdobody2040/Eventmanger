@@ -1,1 +1,9 @@
 venv/
+.local/
+.replit
+.env.example
+pyproject.toml
+replit.md
+__pycache__/
+static/uploads/attendees/*
+logs/

@@ -10,7 +10,7 @@ import secrets
 import hashlib
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify, abort, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_caching import Cache
@@ -22,6 +22,9 @@ from werkzeug.utils import secure_filename
 import pandas as pd
 import logging
 from logging.handlers import RotatingFileHandler
+import zipfile
+from io import BytesIO
+import time
 
 # Load environment variables from .env file
 try:
@@ -998,7 +1001,7 @@ def create_event():
                 try:
                     upload_folder = os.path.join(app.static_folder or 'static', 'uploads', 'attendees')
                     os.makedirs(upload_folder, exist_ok=True)
-                    attendees_filename = f"attendees_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{attendees_file.filename}"
+                    attendees_filename = f"Event {title} {datetime.now().strftime('%Y%m%d')} {attendees_file.filename}"
                     file_path = os.path.join(upload_folder, attendees_filename)
                     attendees_file.save(file_path)
                 except OSError as e:
@@ -2943,6 +2946,56 @@ def api_database_backup():
     except Exception as e:
         app.logger.error(f'Error creating database backup: {str(e)}')
         return jsonify({'error': 'Internal server error occurred during backup'}), 500
+
+
+# Attendees compressing and downloading API
+
+@app.route('/api/download_attendees_zip', methods=['GET'])
+@login_required
+def api_download_attendees_zip():
+
+    try:
+        # Check if user is authenticated
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Define the directory containing the files
+        uploads_dir = os.path.join(app.static_folder, 'uploads', 'attendees')
+        if not os.path.exists(uploads_dir):
+            return jsonify({'error': 'No attendees folder found'}), 404
+
+        # Create a BytesIO object to store the zip file
+        memory_file = BytesIO()
+        
+        # Create a zip file
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Walk through the attendees directory
+            for root, _, files in os.walk(uploads_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # Calculate the relative path for the file in the zip
+                    arcname = os.path.relpath(file_path, uploads_dir)
+                    zf.write(file_path, arcname=arcname)
+
+        # Reset the buffer position to the beginning
+        memory_file.seek(0)
+
+        # Generate a unique filename with timestamp
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = f'attendees_{timestamp}.zip'
+
+        # Send the zip file as a response
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        app.logger.error(f'Error in api_download_attendees_zip: {str(e)}')
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/database/restore', methods=['POST'])
 @login_required

@@ -57,8 +57,13 @@
                     <div class="mb-3">
                         <label for="color_picker" class="form-label">Custom Color Picker</label>
                         <div class="d-flex align-items-center gap-3">
-                            <input type="color" class="form-control form-control-color" id="color_picker" value="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}" title="Choose your color">
-                            <div class="color-preview" id="color_preview" style="width: 50px; height: 50px; border: 2px solid #ddd; border-radius: 8px;" data-color="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}"></div>
+                            <input type="color" class="form-control form-control-color" id="color_picker"
+                                value="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}"
+                                title="Choose your color">
+                            <div class="color-preview" id="color_preview"
+                                style="width: 50px; height: 50px; border: 2px solid #ddd; border-radius: 8px;"
+                                data-color="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}">
+                            </div>
                             <button type="button" class="btn btn-primary" id="apply_custom_color">Apply Color</button>
                         </div>
                         <small class="text-muted">Pick any color from the color wheel</small>
@@ -70,132 +75,156 @@
                         <div class="row g-2">
                             <!-- Blues -->
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#0f6e84" style="background-color: #0f6e84; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#0f6e84" style="background-color: #0f6e84; color: white;">
                                     Blue
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#007bff" style="background-color: #007bff; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#007bff" style="background-color: #007bff; color: white;">
                                     Primary Blue
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#0056b3" style="background-color: #0056b3; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#0056b3" style="background-color: #0056b3; color: white;">
                                     Navy Blue
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#17a2b8" style="background-color: #17a2b8; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#17a2b8" style="background-color: #17a2b8; color: white;">
                                     Cyan
                                 </button>
                             </div>
 
                             <!-- Greens -->
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#198754" style="background-color: #198754; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#198754" style="background-color: #198754; color: white;">
                                     Green
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#20c997" style="background-color: #20c997; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#20c997" style="background-color: #20c997; color: white;">
                                     Mint Green
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#009688" style="background-color: #009688; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#009688" style="background-color: #009688; color: white;">
                                     Teal
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#4caf50" style="background-color: #4caf50; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#4caf50" style="background-color: #4caf50; color: white;">
                                     Material Green
                                 </button>
                             </div>
 
                             <!-- Purples -->
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6f42c1" style="background-color: #6f42c1; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#6f42c1" style="background-color: #6f42c1; color: white;">
                                     Purple
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#8e44ad" style="background-color: #8e44ad; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#8e44ad" style="background-color: #8e44ad; color: white;">
                                     Deep Purple
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#9c27b0" style="background-color: #9c27b0; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#9c27b0" style="background-color: #9c27b0; color: white;">
                                     Magenta
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#673ab7" style="background-color: #673ab7; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#673ab7" style="background-color: #673ab7; color: white;">
                                     Indigo
                                 </button>
                             </div>
 
                             <!-- Reds & Pinks -->
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#dc3545" style="background-color: #dc3545; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#dc3545" style="background-color: #dc3545; color: white;">
                                     Red
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#e74c3c" style="background-color: #e74c3c; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#e74c3c" style="background-color: #e74c3c; color: white;">
                                     Bright Red
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#e91e63" style="background-color: #e91e63; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#e91e63" style="background-color: #e91e63; color: white;">
                                     Pink
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#c2185b" style="background-color: #c2185b; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#c2185b" style="background-color: #c2185b; color: white;">
                                     Deep Pink
                                 </button>
                             </div>
 
                             <!-- Oranges & Yellows -->
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#fd7e14" style="background-color: #fd7e14; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#fd7e14" style="background-color: #fd7e14; color: white;">
                                     Orange
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ff9800" style="background-color: #ff9800; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#ff9800" style="background-color: #ff9800; color: white;">
                                     Amber
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ffc107" style="background-color: #ffc107; color: black;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#ffc107" style="background-color: #ffc107; color: black;">
                                     Yellow
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#ff5722" style="background-color: #ff5722; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#ff5722" style="background-color: #ff5722; color: white;">
                                     Deep Orange
                                 </button>
                             </div>
 
                             <!-- Neutrals & Darks -->
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#6c757d" style="background-color: #6c757d; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#6c757d" style="background-color: #6c757d; color: white;">
                                     Gray
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#495057" style="background-color: #495057; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#495057" style="background-color: #495057; color: white;">
                                     Dark Gray
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#343a40" style="background-color: #343a40; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#343a40" style="background-color: #343a40; color: white;">
                                     Dark
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-outline-secondary preset-color" data-color="#795548" style="background-color: #795548; color: white;">
+                                <button type="button" class="btn btn-outline-secondary preset-color"
+                                    data-color="#795548" style="background-color: #795548; color: white;">
                                     Brown
                                 </button>
                             </div>
@@ -204,8 +233,11 @@
                     </div>
 
                     <!-- Current Color Display -->
-                    <div class="current-theme-display p-3 border rounded" data-bg-color="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}" style="color: white;">
-                        <strong>Current Theme Color: {{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}</strong>
+                    <div class="current-theme-display p-3 border rounded"
+                        data-bg-color="{{ theme_color if theme_color and theme_color.startswith('#') else '#0f6e84' }}"
+                        style="color: white;">
+                        <strong>Current Theme Color: {{ theme_color if theme_color and theme_color.startswith('#') else
+                            '#0f6e84' }}</strong>
                     </div>
                 </div>
             </div>
@@ -227,7 +259,8 @@
                     <div class="mb-3">
                         <label for="app_name" class="form-label">Application Name</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="app_name" value="{{ app_name }}" placeholder="Application Name">
+                            <input type="text" class="form-control" id="app_name" value="{{ app_name }}"
+                                placeholder="Application Name">
                             <button class="btn btn-primary" type="button" id="update_app_name">Update Name</button>
                         </div>
                     </div>
@@ -242,9 +275,10 @@
                         <div class="mb-2" id="current_logo_section">
                             <small class="text-muted d-block">Current Logo:</small>
                             <div class="d-flex align-items-center gap-2">
-                                <img src="{{ app_logo }}" alt="Current Logo" 
-                                     style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
-                                <button class="btn btn-sm btn-outline-danger" type="button" id="remove_logo" title="Remove current logo">
+                                <img src="{{ app_logo }}" alt="Current Logo"
+                                    style="max-height: 50px; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 4px;">
+                                <button class="btn btn-sm btn-outline-danger" type="button" id="remove_logo"
+                                    title="Remove current logo">
                                     <i class="fas fa-trash-alt"></i> Remove
                                 </button>
                             </div>
@@ -252,7 +286,8 @@
                         {% endif %}
 
                         <div class="input-group">
-                            <input type="file" class="form-control" id="app_logo" accept="image/png,image/jpeg,image/jpg,image/svg+xml">
+                            <input type="file" class="form-control" id="app_logo"
+                                accept="image/png,image/jpeg,image/jpg,image/svg+xml">
                             <button class="btn btn-primary" type="button" id="upload_logo">Upload Logo</button>
                         </div>
                         <small class="text-muted">Recommended size: 200x200px, Formats: PNG, JPG, SVG (Max: 2MB)</small>
@@ -276,13 +311,17 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="main_tagline" class="form-label">Main Tagline</label>
-                        <input type="text" class="form-control" id="main_tagline" value="{{ main_tagline or 'Compliance-Driven Event Management' }}" placeholder="Main tagline shown on login page">
+                        <input type="text" class="form-control" id="main_tagline"
+                            value="{{ main_tagline or 'Compliance-Driven Event Management' }}"
+                            placeholder="Main tagline shown on login page">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="main_header" class="form-label">Main Header</label>
-                        <input type="text" class="form-control" id="main_header" value="{{ main_header or 'Secure & Compliant Event Management for ' + app_name }}" placeholder="Main header text">
+                        <input type="text" class="form-control" id="main_header"
+                            value="{{ main_header or 'Secure & Compliant Event Management for ' + app_name }}"
+                            placeholder="Main header text">
                     </div>
                 </div>
             </div>
@@ -291,7 +330,8 @@
                 <div class="col-12">
                     <div class="mb-3">
                         <label for="app_description" class="form-label">Application Description</label>
-                        <textarea class="form-control" id="app_description" rows="2" placeholder="Streamline your pharmaceutical events while maintaining strict regulatory compliance...">{{ app_description or 'Streamline your pharmaceutical events while maintaining strict regulatory compliance with GDPR, HIPAA, and Sunshine Act/EFPIA requirements.' }}</textarea>
+                        <textarea class="form-control" id="app_description" rows="2"
+                            placeholder="Streamline your pharmaceutical events while maintaining strict regulatory compliance...">{{ app_description or 'Streamline your pharmaceutical events while maintaining strict regulatory compliance with GDPR, HIPAA, and Sunshine Act/EFPIA requirements.' }}</textarea>
                     </div>
                 </div>
             </div>
@@ -300,22 +340,26 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="feature1_title" class="form-label">Feature 1 Title</label>
-                        <input type="text" class="form-control" id="feature1_title" value="{{ feature1_title or 'Regulatory Compliance' }}" placeholder="Feature title">
+                        <input type="text" class="form-control" id="feature1_title"
+                            value="{{ feature1_title or 'Regulatory Compliance' }}" placeholder="Feature title">
                     </div>
                     <div class="mb-3">
                         <label for="feature1_description" class="form-label">Feature 1 Description</label>
-                        <textarea class="form-control" id="feature1_description" rows="3" placeholder="Feature description">{{ feature1_description or 'Built-in tools for Sunshine Act reporting, HCP payment tracking, and compliance checks.' }}</textarea>
+                        <textarea class="form-control" id="feature1_description" rows="3"
+                            placeholder="Feature description">{{ feature1_description or 'Built-in tools for Sunshine Act reporting, HCP payment tracking, and compliance checks.' }}</textarea>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="feature2_title" class="form-label">Feature 2 Title</label>
-                        <input type="text" class="form-control" id="feature2_title" value="{{ feature2_title or 'Role-based Access Control' }}" placeholder="Feature title">
+                        <input type="text" class="form-control" id="feature2_title"
+                            value="{{ feature2_title or 'Role-based Access Control' }}" placeholder="Feature title">
                     </div>
                     <div class="mb-3">
                         <label for="feature2_description" class="form-label">Feature 2 Description</label>
-                        <textarea class="form-control" id="feature2_description" rows="3" placeholder="Feature description">{{ feature2_description or 'Granular permissions for admins, event managers, speakers, and attendees.' }}</textarea>
+                        <textarea class="form-control" id="feature2_description" rows="3"
+                            placeholder="Feature description">{{ feature2_description or 'Granular permissions for admins, event managers, speakers, and attendees.' }}</textarea>
                     </div>
                 </div>
             </div>
@@ -355,14 +399,15 @@
                             </thead>
                             <tbody id="category_list">
                                 {% for category in categories %}
-                                    <tr data-id="{{ category.id }}">
-                                        <td>{{ category.name }}</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-danger btn-delete-category" data-id="{{ category.id }}" data-name="{{ category.name }}">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
+                                <tr data-id="{{ category.id }}">
+                                    <td>{{ category.name }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-danger btn-delete-category"
+                                            data-id="{{ category.id }}" data-name="{{ category.name }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -380,7 +425,8 @@
                     <form id="add_category_form">
                         <div class="mb-3">
                             <label for="category_name" class="form-label">Category Name</label>
-                            <input type="text" class="form-control" id="category_name" placeholder="e.g., Cardiology" required>
+                            <input type="text" class="form-control" id="category_name" placeholder="e.g., Cardiology"
+                                required>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-plus-circle me-2"></i> Add Category
@@ -416,14 +462,15 @@
                             </thead>
                             <tbody id="type_list">
                                 {% for type in event_types %}
-                                    <tr data-id="{{ type.id }}">
-                                        <td>{{ type.name }}</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-danger btn-delete-type" data-id="{{ type.id }}" data-name="{{ type.name }}">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
+                                <tr data-id="{{ type.id }}">
+                                    <td>{{ type.name }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-danger btn-delete-type" data-id="{{ type.id }}"
+                                            data-name="{{ type.name }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -441,7 +488,8 @@
                     <form id="add_type_form">
                         <div class="mb-3">
                             <label for="type_name" class="form-label">Event Type Name</label>
-                            <input type="text" class="form-control" id="type_name" placeholder="e.g., Workshop" required>
+                            <input type="text" class="form-control" id="type_name" placeholder="e.g., Workshop"
+                                required>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-plus-circle me-2"></i> Add Event Type
@@ -465,14 +513,27 @@
             <div class="row">
                 <div class="col-md-6">
                     <h5 class="mb-3">Backup Database</h5>
-                    <p class="text-muted mb-3">Create a backup of all your data including events, users, categories, and settings.</p>
+                    <p class="text-muted mb-3">Create a backup of all your data including events, users, categories, and
+                        settings.</p>
                     <button type="button" class="btn btn-success w-100" id="backup_database">
                         <i class="fas fa-download me-2"></i> Download Database Backup
                     </button>
+
+                    <p class="text-muted mb-3 mt-2">Download all previously uploaded attendees sheets for all created events by each event name, date, time, and uploaded file name</p>
+                    <button type="button" class="btn btn-success w-100" id="attendees_download">
+                        <i class="fas fa-download me-2"></i> Download Attendees Sheets
+                    </button>
+
+
                 </div>
+
+
+
+
                 <div class="col-md-6">
                     <h5 class="mb-3">Restore Database</h5>
-                    <p class="text-muted mb-3">Upload and restore a previous database backup. This will replace all current data.</p>
+                    <p class="text-muted mb-3">Upload and restore a previous database backup. This will replace all
+                        current data.</p>
                     <div class="input-group mb-3">
                         <input type="file" class="form-control" id="restore_file" accept=".sql">
                         <button class="btn btn-warning" type="button" id="restore_database">
@@ -514,23 +575,25 @@
                             </thead>
                             <tbody id="user_list">
                                 {% for user in users %}
-                                    <tr data-id="{{ user.id }}">
-                                        <td>{{ user.email }}</td>
-                                        <td>
-                                            <span class="badge bg-{% if user.role == 'admin' %}primary{% elif user.role == 'medical_rep' %}info{% else %}secondary{% endif %}">
-                                                {% if user.role == 'medical_rep' %}MEDICAL REP{% else %}{{ user.role|upper }}{% endif %}
-                                            </span>
-                                        </td>
-                                        <td class="text-end">
-                                            {% if user.id != current_user.id %}
-                                                <button class="btn btn-sm btn-danger btn-delete-user" data-id="{{ user.id }}">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            {% else %}
-                                                <span class="badge bg-info">Current User</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
+                                <tr data-id="{{ user.id }}">
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        <span
+                                            class="badge bg-{% if user.role == 'admin' %}primary{% elif user.role == 'medical_rep' %}info{% else %}secondary{% endif %}">
+                                            {% if user.role == 'medical_rep' %}MEDICAL REP{% else %}{{ user.role|upper
+                                            }}{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if user.id != current_user.id %}
+                                        <button class="btn btn-sm btn-danger btn-delete-user" data-id="{{ user.id }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        {% else %}
+                                        <span class="badge bg-info">Current User</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -548,11 +611,13 @@
                     <form id="add_user_form">
                         <div class="mb-3">
                             <label for="user_email" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="user_email" placeholder="user@example.com" required>
+                            <input type="email" class="form-control" id="user_email" placeholder="user@example.com"
+                                required>
                         </div>
                         <div class="mb-3">
                             <label for="user_password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="user_password" placeholder="Minimum 6 characters" required>
+                            <input type="password" class="form-control" id="user_password"
+                                placeholder="Minimum 6 characters" required>
                         </div>
                         <div class="mb-3">
                             <label for="user_role" class="form-label">Role</label>
